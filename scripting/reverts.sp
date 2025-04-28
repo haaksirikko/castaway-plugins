@@ -280,7 +280,7 @@ public void OnPluginStart() {
 	ItemDefine("Gloves of Running Urgently", "glovesru", "Reverted to pre-inferno, no health drain, marks for death");
 	ItemDefine("Half-Zatoichi", "zatoichi", "Reverted to pre-toughbreak, fast switch, less range, old honorbound, full heal, crits");
 	ItemDefine("Liberty Launcher", "liberty", "Reverted to release, +40% projectile speed, -25% clip size");
-	ItemDefine("Loch n Load", "lochload", "Reverted to pre-gunmettle, +20% damage against everything");
+	ItemDefine("Loch n Load", "lochload", "Reverted to pre-2014, +20% damage, -50% clip, no radius penalty, +25% self damage, +/-15% damage variance");
 	ItemDefine("Loose Cannon", "cannon", "Reverted to pre-toughbreak, +50% projectile speed, constant 60 dmg impacts");
 	ItemDefine("Market Gardener", "gardener", "Reverted to pre-toughbreak, no attack speed penalty");
 	ItemDefine("Panic Attack", "panic", "Reverted to pre-inferno, hold fire to load shots, let go to release");
@@ -1738,13 +1738,14 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 	) {
 		item1 = TF2Items_CreateItem(0);
 		TF2Items_SetFlags(item1, (OVERRIDE_ATTRIBUTES|PRESERVE_ATTRIBUTES));
-		TF2Items_SetNumAttributes(item1, 2);
+		TF2Items_SetNumAttributes(item1, 6);
 		TF2Items_SetAttribute(item1, 0, 2, 1.20); // damage bonus
 		TF2Items_SetAttribute(item1, 1, 137, 1.00); // dmg bonus vs buildings
 		// for pre smissmas 2014 loch
-		// TF2Items_SetAttribute(item1, 2, 207, 1.25); // self damage
-		// TF2Items_SetAttribute(item1, 3, 100, 1.00); // radius penalty
-		// TF2Items_SetAttribute(item1, 4, 3, 0.50); // clip size
+		TF2Items_SetAttribute(item1, 2, 207, 1.25); // self damage
+		TF2Items_SetAttribute(item1, 3, 100, 1.00); // radius penalty
+		TF2Items_SetAttribute(item1, 4, 3, 0.50); // clip size
+		TF2Items_SetAttribute(item1, 5, 681, 0.00); // grenade no spin
 	}
 
 	else if (
@@ -2721,6 +2722,24 @@ Action SDKHookCB_OnTakeDamage(
 						damage = 60.0;
 						return Plugin_Changed;
 					}
+				}
+			}
+			
+			{
+				// loch-n-load damage spread
+				
+				if (
+					ItemIsEnabled("lochload") &&
+					StrEqual(class, "tf_weapon_grenadelauncher") &&
+					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 308
+				) {
+					// don't apply spread on crits
+					if (damage_type & DMG_CRIT != 0)
+						return Plugin_Continue;
+					
+					// apply ±15% damage variance
+					damage *= GetRandomFloat(0.85, 1.15);
+					return Plugin_Changed;
 				}
 			}
 
