@@ -183,6 +183,8 @@ enum struct Player {
 
 //item sets
 #define ItemSet_Saharan 1
+#define ItemSet_CrocoStyle 2
+#define ItemSet_SpDelivery 3
 
 enum struct Entity {
 	bool exists;
@@ -347,6 +349,7 @@ public void OnPluginStart() {
 	ItemDefine("Cozy Camper","cozycamper","Reverted to pre-matchmaking, flinch resist at any charge level", CLASSFLAG_SNIPER);
 #endif
 	ItemDefine("Crit-a-Cola", "critcola", "Reverted to pre-matchmaking, +25% movespeed, +10% damage taken, no mark-for-death on attack", CLASSFLAG_SCOUT);
+	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, can't be killed by headshots. Ol' Snaggletooth not required", CLASSFLAG_SNIPER);
 #if defined VERDIUS_PATCHES
 	ItemDefine("Dalokohs Bar", "dalokohsbar", "Reverted to Gun Mettle update, can now overheal to 400 hp again", CLASSFLAG_HEAVY);
 #endif	
@@ -397,6 +400,7 @@ public void OnPluginStart() {
 	ItemDefine("Shortstop", "shortstop", "Reverted to pre-Manniversary, fast reload, no push force penalty, shares pistol ammo; modern shove is kept", CLASSFLAG_SCOUT);
 	ItemDefine("Soda Popper", "sodapop", "Reverted to pre-Smissmas 2013, run to build hype and auto gain minicrits", CLASSFLAG_SCOUT);
 	ItemDefine("Solemn Vow", "solemn", "Reverted to pre-gunmettle, firing speed penalty removed", CLASSFLAG_MEDIC);
+	ItemDefine("Special Delivery (set)", "spdelivery", "Restored release item set bonus, +25 max health. Milkman hat not required", CLASSFLAG_SCOUT);
 	ItemDefine("Splendid Screen", "splendid", "Reverted to pre-toughbreak, 15% blast resist, no faster recharge, crit after bash, no debuff removal, bash dmg at any range", CLASSFLAG_DEMOMAN);
 	ItemDefine("Spy-cicle", "spycicle", "Reverted to pre-gunmettle, fire immunity for 2s, silent killer, cannot regenerate from ammo sources", CLASSFLAG_SPY);
 	ItemDefine("Sticky Jumper", "stkjumper", "Reverted to Pyromania update, can have 8 stickybombs out at once again", CLASSFLAG_DEMOMAN);
@@ -2681,12 +2685,22 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 
 		//item sets
 		if (
-			ItemIsEnabled("saharan")
+			ItemIsEnabled("crocostyle") ||
+			ItemIsEnabled("saharan") ||
+			ItemIsEnabled("spdelivery")
 		) {
 			// reset set bonuses on loadout changes
 			TFClassType client_class = TF2_GetPlayerClass(client);
 			switch (client_class)
 			{
+				case TFClass_Scout:
+				{
+					TF2Attrib_SetByDefIndex(client, 517, 0.0); // SET BONUS: max health additive bonus
+				}
+				case TFClass_Sniper:
+				{
+					TF2Attrib_SetByDefIndex(client, 176, 0.0); // SET BONUS: no death from headshots
+				}
 				case TFClass_Spy:
 				{
 					TF2Attrib_SetByDefIndex(client, 159, 0.0); // SET BONUS: cloak blink time penalty
@@ -2709,6 +2723,32 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					GetEntityClassname(weapon, classname, sizeof(class));
 					int item_index = GetEntProp(weapon,Prop_Send,"m_iItemDefinitionIndex");
 
+					// Special Delivery (set)
+					if(
+						ItemIsEnabled("spdelivery") &&
+						(StrEqual(classname, "tf_weapon_handgun_scout_primary") &&
+						(item_index == 220)) ||
+						(StrEqual(classname, "tf_weapon_jar_milk") &&
+						(item_index == 222)) ||
+						(StrEqual(classname, "tf_weapon_bat_fish") &&
+						(item_index == 221))
+					) {
+						wep_count++;
+						if(wep_count == 3) active_set = ItemSet_SpDelivery;
+					}
+
+					// Croc-o-Style Kit
+					if(
+						ItemIsEnabled("crocostyle") &&
+						(StrEqual(classname, "tf_weapon_sniperrifle") &&
+						(item_index == 230)) ||
+						(StrEqual(classname, "tf_weapon_club") &&
+						(item_index == 232))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = ItemSet_CrocoStyle;
+					}
+
 					// Saharan Spy
 					if(
 						ItemIsEnabled("saharan") &&
@@ -2725,27 +2765,39 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 
 			if (active_set)
 			{
-				bool validSet = true;
+				bool validSet = false;
 
-				// bool validSet = false;
-				// int num_wearables = TF2Util_GetPlayerWearableCount(client);
-				// for (int i = 0; i < num_wearables; i++)
-				// {
-				// 	int wearable = TF2Util_GetPlayerWearable(client, i);
-				// 	int item_index = GetEntProp(wearable,Prop_Send,"m_iItemDefinitionIndex");
-				// 	if(
-				// 		(active_set == ItemSet_Saharan) &&
-				// 		(item_index == 223)
-				// 	) {
-				// 		validSet = true;
-				// 		break;
-				// 	}
-				// }
+				if (active_set == ItemSet_CrocoStyle)
+				{
+					int num_wearables = TF2Util_GetPlayerWearableCount(client);
+					for (int i = 0; i < num_wearables; i++)
+					{
+						int wearable = TF2Util_GetPlayerWearable(client, i);
+						int item_index = GetEntProp(wearable,Prop_Send,"m_iItemDefinitionIndex");
+						if (
+							// This code only checks for Darwin's Danger Shield (231)
+							(item_index == 231)
+						) {
+							validSet = true;
+							break;
+						}
+					}
+				} else {
+					validSet = true;
+				}
 
 				if (validSet)
 				{
 					switch (active_set)
 					{
+						case ItemSet_SpDelivery:
+						{
+							TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
+						}
+						case ItemSet_CrocoStyle:
+						{
+							TF2Attrib_SetByDefIndex(client, 176, 1.0); // SET BONUS: no death from headshots
+						}
 						case ItemSet_Saharan:
 						{
 							TF2Attrib_SetByDefIndex(client, 159, 0.5); // SET BONUS: cloak blink time penalty
