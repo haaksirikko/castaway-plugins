@@ -429,7 +429,7 @@ public void OnPluginStart() {
 	ItemDefine("Cozy Camper","cozycamper","Reverted to pre-matchmaking, flinch resist at any charge level", CLASSFLAG_SNIPER, Wep_CozyCamper);
 #endif
 	ItemDefine("Crit-a-Cola", "critcola", "Reverted to pre-matchmaking, +25% movespeed, +10% damage taken, no mark-for-death on attack", CLASSFLAG_SCOUT, Wep_CritCola);
-	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, no death from headshots. Equip the Sydney Sleeper, DDS and Bushwacka to gain the bonus, Ol' Snaggletooth not required", CLASSFLAG_SNIPER, Wep_CrocoStyle);
+	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, no death from headshots when above 1 HP. Equip the Sydney Sleeper, DDS and Bushwacka to gain the bonus, Ol' Snaggletooth not required", CLASSFLAG_SNIPER, Wep_CrocoStyle);
 #if defined VERDIUS_PATCHES
 	ItemDefine("Dalokohs Bar", "dalokohsbar", "Reverted to Gun Mettle update, can now overheal to 400 hp again", CLASSFLAG_HEAVY, Wep_Dalokoh);
 #endif
