@@ -185,6 +185,7 @@ enum struct Player {
 #define ItemSet_Saharan 1
 #define ItemSet_CrocoStyle 2
 #define ItemSet_SpDelivery 3
+#define ItemSet_Expert 4
 
 enum struct Entity {
 	bool exists;
@@ -349,7 +350,7 @@ public void OnPluginStart() {
 	ItemDefine("Cozy Camper","cozycamper","Reverted to pre-matchmaking, flinch resist at any charge level", CLASSFLAG_SNIPER);
 #endif
 	ItemDefine("Crit-a-Cola", "critcola", "Reverted to pre-matchmaking, +25% movespeed, +10% damage taken, no mark-for-death on attack", CLASSFLAG_SCOUT);
-	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, can't be killed by headshots. Ol' Snaggletooth not required", CLASSFLAG_SNIPER);
+	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, no death from headshots. Equip the Sydney Sleeper, DDS and Bushwacka to gain the bonus, Ol' Snaggletooth not required", CLASSFLAG_SNIPER);
 #if defined VERDIUS_PATCHES
 	ItemDefine("Dalokohs Bar", "dalokohsbar", "Reverted to Gun Mettle update, can now overheal to 400 hp again", CLASSFLAG_HEAVY);
 #endif	
@@ -367,6 +368,7 @@ public void OnPluginStart() {
 	ItemDefine("Enforcer", "enforcer", "Reverted to pre-gunmettle, damage bonus while undisguised, no piercing", CLASSFLAG_SPY);
 	ItemDefine("Equalizer & Escape Plan", "equalizer", "Reverted to pre-Pyromania, merged back together, blocks healing, no mark-for-death", CLASSFLAG_SOLDIER);
 	ItemDefine("Eviction Notice", "eviction", "Reverted to pre-inferno, no health drain, +20% damage taken", CLASSFLAG_HEAVY);
+	ItemDefine("Expert's Ordnance", "expert", "Restored release item set bonus. +10% fire resist. Equip the Loch-n-Load and Ullapool Caber to gain the bonus, Scotch Bonnet not required", CLASSFLAG_DEMOMAN);
 	ItemDefine("Fists of Steel", "fiststeel", "Reverted to pre-inferno, no healing penalties", CLASSFLAG_HEAVY);
 	ItemDefine("Flying Guillotine", "guillotine", "Reverted to pre-inferno, stun crits, distance mini-crits, no recharge", CLASSFLAG_SCOUT);
 	ItemDefine("Gloves of Running Urgently", "glovesru", "Reverted to pre-inferno, no health drain, marks for death", CLASSFLAG_HEAVY);
@@ -400,7 +402,7 @@ public void OnPluginStart() {
 	ItemDefine("Shortstop", "shortstop", "Reverted to pre-Manniversary, fast reload, no push force penalty, shares pistol ammo; modern shove is kept", CLASSFLAG_SCOUT);
 	ItemDefine("Soda Popper", "sodapop", "Reverted to pre-Smissmas 2013, run to build hype and auto gain minicrits", CLASSFLAG_SCOUT);
 	ItemDefine("Solemn Vow", "solemn", "Reverted to pre-gunmettle, firing speed penalty removed", CLASSFLAG_MEDIC);
-	ItemDefine("Special Delivery (set)", "spdelivery", "Restored release item set bonus, +25 max health. Milkman hat not required", CLASSFLAG_SCOUT);
+	ItemDefine("Special Delivery (set)", "spdelivery", "Restored release item set bonus, +25 max health. Equip the Shortstop, Mad Milk and Holy Mackerel to gain the bonus, Milkman not required", CLASSFLAG_SCOUT);
 	ItemDefine("Splendid Screen", "splendid", "Reverted to pre-toughbreak, 15% blast resist, no faster recharge, crit after bash, no debuff removal, bash dmg at any range", CLASSFLAG_DEMOMAN);
 	ItemDefine("Spy-cicle", "spycicle", "Reverted to pre-gunmettle, fire immunity for 2s, silent killer, cannot regenerate from ammo sources", CLASSFLAG_SPY);
 	ItemDefine("Sticky Jumper", "stkjumper", "Reverted to Pyromania update, can have 8 stickybombs out at once again", CLASSFLAG_DEMOMAN);
@@ -2687,7 +2689,8 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 		if (
 			ItemIsEnabled("crocostyle") ||
 			ItemIsEnabled("saharan") ||
-			ItemIsEnabled("spdelivery")
+			ItemIsEnabled("spdelivery") ||
+			ItemIsEnabled("expert")
 		) {
 			// reset set bonuses on loadout changes
 			TFClassType client_class = TF2_GetPlayerClass(client);
@@ -2696,6 +2699,10 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 				case TFClass_Scout:
 				{
 					TF2Attrib_SetByDefIndex(client, 517, 0.0); // SET BONUS: max health additive bonus
+				}
+				case TFClass_DemoMan:
+				{
+					TF2Attrib_SetByDefIndex(client, 492, 1.0); // SET BONUS: dmg taken from fire reduced
 				}
 				case TFClass_Sniper:
 				{
@@ -2735,6 +2742,19 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					) {
 						wep_count++;
 						if(wep_count == 3) active_set = ItemSet_SpDelivery;
+					}
+
+					// Expert's Ordnance
+					if(
+						ItemIsEnabled("expert") &&
+						(StrEqual(classname, "tf_weapon_grenadelauncher") &&
+						(item_index == 308)) ||
+						(StrEqual(classname, "tf_weapon_stickbomb") &&
+						(item_index == 307))
+					) {
+						if (first_wep == -1) first_wep = weapon;
+						wep_count++;
+						if(wep_count == 2) active_set = ItemSet_Expert;
 					}
 
 					// Croc-o-Style Kit
@@ -2793,6 +2813,10 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						case ItemSet_SpDelivery:
 						{
 							TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
+						}
+						case ItemSet_Expert:
+						{
+							TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced
 						}
 						case ItemSet_CrocoStyle:
 						{
