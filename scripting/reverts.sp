@@ -433,8 +433,8 @@ public void OnPluginStart() {
 #if defined VERDIUS_PATCHES
 	ItemDefine("Dalokohs Bar", "dalokohsbar", "Reverted to Gun Mettle update, can now overheal to 400 hp again", CLASSFLAG_HEAVY, Wep_Dalokoh);
 #endif
-	ItemDefine("Darwin's Danger Shield", "darwin", "Reverted to pre-inferno, +25 max hp, 15% bullet resist (4.7% against crit bullets), 20% blast vuln, no fire resists", CLASSFLAG_SNIPER, Wep_Darwin);
-	ItemVariant(Wep_Darwin, "Reverted to pre-2013, +25 max health, no damage modifiers or afterburn immunity");
+	ItemDefine("Darwin's Danger Shield", "darwin", "Reverted to pre-2013, +25 max health, no damage modifiers or afterburn immunity", CLASSFLAG_SNIPER, Wep_Darwin);
+	ItemVariant(Wep_Darwin, "Reverted to pre-inferno, +25 max hp, 15% bullet resist (4.7% against crit bullets), 20% blast vuln, no fire resists");
 	ItemDefine("Dead Ringer", "ringer", "Reverted to pre-gunmettle, can pick up ammo, 90% dmg resist for up to 6.5s (reduced by dmg taken)", CLASSFLAG_SPY, Wep_DeadRinger);
 	ItemDefine("Degreaser", "degreaser", "Reverted to pre-toughbreak, 65% faster weapon switch, -10% dmg & -25% afterburn dmg penalties", CLASSFLAG_PYRO, Wep_Degreaser);
 #if defined VERDIUS_PATCHES
@@ -1896,7 +1896,7 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 		case 231: { if (ItemIsEnabled(Wep_Darwin)) {
 			item1 = TF2Items_CreateItem(0);
 			TF2Items_SetFlags(item1, (OVERRIDE_ATTRIBUTES|PRESERVE_ATTRIBUTES));
-			bool dmg_mods = GetItemVariant(Wep_Darwin) == 0;
+			bool dmg_mods = GetItemVariant(Wep_Darwin) == 1;
 			TF2Items_SetNumAttributes(item1, dmg_mods ? 5 : 3);
 			TF2Items_SetAttribute(item1, 0, 60, 1.0); // +0% fire damage resistance on wearer
 			TF2Items_SetAttribute(item1, 1, 527, 0.0); // remove afterburn immunity
