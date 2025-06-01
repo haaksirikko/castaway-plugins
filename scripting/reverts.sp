@@ -183,6 +183,7 @@ enum struct Player {
 #define ItemSet_CrocoStyle 2
 #define ItemSet_SpDelivery 3
 #define ItemSet_Expert 4
+#define ItemSet_Hibernate 5
 
 enum struct Entity {
 	bool exists;
@@ -322,6 +323,7 @@ enum
 	Wep_MarketGardener,
 	Wep_GRU,
 	Wep_Zatoichi, // Half-Zatoichi
+	Wep_Hibernate, // Hibernating Bear
 	Wep_LibertyLauncher,
 	Wep_LochLoad,
 	Wep_LooseCannon,
@@ -451,6 +453,7 @@ public void OnPluginStart() {
 	ItemDefine("Flying Guillotine", "guillotine", "Reverted to pre-inferno, stun crits, distance mini-crits, no recharge", CLASSFLAG_SCOUT, Wep_Cleaver);
 	ItemDefine("Gloves of Running Urgently", "glovesru", "Reverted to pre-toughbreak, no health drain or holster penalty, marks for death, -25% damage", CLASSFLAG_HEAVY, Wep_GRU);
 	ItemDefine("Half-Zatoichi", "zatoichi", "Reverted to pre-toughbreak, fast switch, less range, cannot switch until kill, full heal, has random crits", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_Zatoichi);
+	ItemDefine("Hibernating Bear", "hibernate", "Restored release item set bonus, +5% crit resist. Equip the Brass Beast, Buffalo Steak Sandvich and Warrior's Spirit to gain the bonus, Big Chief not required", CLASSFLAG_HEAVY, Wep_Hibernate);
 	ItemDefine("Liberty Launcher", "liberty", "Reverted to release, +40% projectile speed, -25% clip size", CLASSFLAG_SOLDIER, Wep_LibertyLauncher);
 	ItemDefine("Loch-n-Load", "lochload", "Reverted to pre-gunmettle, +20% damage against everything", CLASSFLAG_DEMOMAN, Wep_LochLoad);
 	ItemVariant(Wep_LochLoad, "Reverted to pre-2014, +20% damage (15% variance), -50% clip, +25% self dmg, no radius penalty, grenades tumble");
@@ -2649,7 +2652,8 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 			ItemIsEnabled(Wep_CrocoStyle) ||
 			ItemIsEnabled(Wep_Saharan) ||
 			ItemIsEnabled(Wep_SpDelivery) ||
-			ItemIsEnabled(Wep_Expert)
+			ItemIsEnabled(Wep_Expert) ||
+			ItemIsEnabled(Wep_Hibernate)
 		) {
 			// reset set bonuses on loadout changes
 			TFClassType client_class = TF2_GetPlayerClass(client);
@@ -2661,7 +2665,11 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 				}
 				case TFClass_DemoMan:
 				{
-					TF2Attrib_SetByDefIndex(client, 492, 1.0); // SET BONUS: dmg taken from fire reduced
+					TF2Attrib_SetByDefIndex(client, 492, 1.0); // SET BONUS: dmg taken from fire reduced set bonus
+				}
+				case TFClass_Heavy:
+				{
+					TF2Attrib_SetByDefIndex(client, 491, 1.0); // SET BONUS: dmg taken from crit reduced set bonus
 				}
 				case TFClass_Sniper:
 				{
@@ -2711,9 +2719,22 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						(StrEqual(classname, "tf_weapon_stickbomb") &&
 						(item_index == 307))
 					) {
-						if (first_wep == -1) first_wep = weapon;
 						wep_count++;
 						if(wep_count == 2) active_set = ItemSet_Expert;
+					}
+
+					// Hibernating Bear
+					if(
+						ItemIsEnabled(Wep_Hibernate) &&
+						(StrEqual(classname, "tf_weapon_minigun") &&
+						(item_index == 312)) ||
+						(StrEqual(classname, "tf_weapon_lunchbox") &&
+						(item_index == 311)) ||
+						(StrEqual(classname, "tf_weapon_fists") &&
+						(item_index == 310))
+					) {
+						wep_count++;
+						if(wep_count == 3) active_set = ItemSet_Hibernate;
 					}
 
 					// Croc-o-Style Kit
@@ -2776,7 +2797,11 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						}
 						case ItemSet_Expert:
 						{
-							TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced
+							TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced set bonus
+						}
+						case ItemSet_Hibernate:
+						{
+							TF2Attrib_SetByDefIndex(client, 491, 0.95); // SET BONUS: dmg taken from crit reduced set bonus
 						}
 						case ItemSet_CrocoStyle:
 						{
