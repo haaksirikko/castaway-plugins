@@ -2640,175 +2640,175 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 			}
 		}
 
-        //item sets
-        if (
-            ItemIsEnabled(Wep_CrocoStyle) ||
-            ItemIsEnabled(Wep_Saharan) ||
-            ItemIsEnabled(Wep_SpDelivery) ||
-            ItemIsEnabled(Wep_Expert) ||
-            ItemIsEnabled(Wep_Hibernate)
-        ) {
-            // reset set bonuses on loadout changes
-            TFClassType client_class = TF2_GetPlayerClass(client);
-            switch (client_class)
-            {
-                case TFClass_Scout:
-                {
-                    TF2Attrib_SetByDefIndex(client, 517, 0.0); // SET BONUS: max health additive bonus
-                }
-                case TFClass_DemoMan:
-                {
-                    TF2Attrib_SetByDefIndex(client, 492, 1.0); // SET BONUS: dmg taken from fire reduced set bonus
-                }
-                case TFClass_Heavy:
-                {
-                    TF2Attrib_SetByDefIndex(client, 491, 1.0); // SET BONUS: dmg taken from crit reduced set bonus
-                }
-                case TFClass_Sniper:
-                {
-                    TF2Attrib_SetByDefIndex(client, 176, 0.0); // SET BONUS: no death from headshots
-                }
-                case TFClass_Spy:
-                {
-                    TF2Attrib_SetByDefIndex(client, 159, 0.0); // SET BONUS: cloak blink time penalty
-                    TF2Attrib_SetByDefIndex(client, 160, 0.0); // SET BONUS: quiet unstealth
-                }
-            }
+		//item sets
+		if (
+			ItemIsEnabled(Wep_CrocoStyle) ||
+			ItemIsEnabled(Wep_Saharan) ||
+			ItemIsEnabled(Wep_SpDelivery) ||
+			ItemIsEnabled(Wep_Expert) ||
+			ItemIsEnabled(Wep_Hibernate)
+		) {
+			// reset set bonuses on loadout changes
+			TFClassType client_class = TF2_GetPlayerClass(client);
+			switch (client_class)
+			{
+				case TFClass_Scout:
+				{
+					TF2Attrib_SetByDefIndex(client, 517, 0.0); // SET BONUS: max health additive bonus
+				}
+				case TFClass_DemoMan:
+				{
+					TF2Attrib_SetByDefIndex(client, 492, 1.0); // SET BONUS: dmg taken from fire reduced set bonus
+				}
+				case TFClass_Heavy:
+				{
+					TF2Attrib_SetByDefIndex(client, 491, 1.0); // SET BONUS: dmg taken from crit reduced set bonus
+				}
+				case TFClass_Sniper:
+				{
+					TF2Attrib_SetByDefIndex(client, 176, 0.0); // SET BONUS: no death from headshots
+				}
+				case TFClass_Spy:
+				{
+					TF2Attrib_SetByDefIndex(client, 159, 0.0); // SET BONUS: cloak blink time penalty
+					TF2Attrib_SetByDefIndex(client, 160, 0.0); // SET BONUS: quiet unstealth
+				}
+			}
 
-            //handle item sets
-            int wep_count = 0;
-            int active_set = 0;
+			//handle item sets
+			int wep_count = 0;
+			int active_set = 0;
 
-            int length = GetEntPropArraySize(client, Prop_Send, "m_hMyWeapons");
-            for (int i;i < length; i++)
-            {
-                weapon = GetEntPropEnt(client,Prop_Send,"m_hMyWeapons",i);
-                if (weapon != -1)
-                {
-                    char classname[64];
-                    GetEntityClassname(weapon, classname, sizeof(class));
-                    int item_index = GetEntProp(weapon,Prop_Send,"m_iItemDefinitionIndex");
+			int length = GetEntPropArraySize(client, Prop_Send, "m_hMyWeapons");
+			for (int i;i < length; i++)
+			{
+				weapon = GetEntPropEnt(client,Prop_Send,"m_hMyWeapons",i);
+				if (weapon != -1)
+				{
+					char classname[64];
+					GetEntityClassname(weapon, classname, sizeof(class));
+					int item_index = GetEntProp(weapon,Prop_Send,"m_iItemDefinitionIndex");
 
-                    // Special Delivery (set)
-                    if(
-                        ItemIsEnabled(Wep_SpDelivery) &&
-                        (StrEqual(classname, "tf_weapon_handgun_scout_primary") &&
-                        (item_index == 220)) ||
-                        (StrEqual(classname, "tf_weapon_jar_milk") &&
-                        (item_index == 222)) ||
-                        (StrEqual(classname, "tf_weapon_bat_fish") &&
-                        (item_index == 221))
-                    ) {
-                        wep_count++;
-                        if(wep_count == 3) active_set = Wep_SpDelivery;
-                    }
+					// Special Delivery (set)
+					if(
+						ItemIsEnabled(Wep_SpDelivery) &&
+						(StrEqual(classname, "tf_weapon_handgun_scout_primary") &&
+						(item_index == 220)) ||
+						(StrEqual(classname, "tf_weapon_jar_milk") &&
+						(item_index == 222)) ||
+						(StrEqual(classname, "tf_weapon_bat_fish") &&
+						(item_index == 221))
+					) {
+						wep_count++;
+						if(wep_count == 3) active_set = Wep_SpDelivery;
+					}
 
-                    // Expert's Ordnance
-                    if(
-                        ItemIsEnabled(Wep_Expert) &&
-                        (StrEqual(classname, "tf_weapon_grenadelauncher") &&
-                        (item_index == 308)) ||
-                        (StrEqual(classname, "tf_weapon_stickbomb") &&
-                        (item_index == 307))
-                    ) {
-                        wep_count++;
-                        if(wep_count == 2) active_set = Wep_Expert;
-                    }
+					// Expert's Ordnance
+					if(
+						ItemIsEnabled(Wep_Expert) &&
+						(StrEqual(classname, "tf_weapon_grenadelauncher") &&
+						(item_index == 308)) ||
+						(StrEqual(classname, "tf_weapon_stickbomb") &&
+						(item_index == 307))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = Wep_Expert;
+					}
 
-                    // Hibernating Bear
-                    if(
-                        ItemIsEnabled(Wep_Hibernate) &&
-                        (StrEqual(classname, "tf_weapon_minigun") &&
-                        (item_index == 312)) ||
-                        (StrEqual(classname, "tf_weapon_lunchbox") &&
-                        (item_index == 311)) ||
-                        (StrEqual(classname, "tf_weapon_fists") &&
-                        (item_index == 310))
-                    ) {
-                        wep_count++;
-                        if(wep_count == 3) active_set = Wep_Hibernate;
-                    }
+					// Hibernating Bear
+					if(
+						ItemIsEnabled(Wep_Hibernate) &&
+						(StrEqual(classname, "tf_weapon_minigun") &&
+						(item_index == 312)) ||
+						(StrEqual(classname, "tf_weapon_lunchbox") &&
+						(item_index == 311)) ||
+						(StrEqual(classname, "tf_weapon_fists") &&
+						(item_index == 310))
+					) {
+						wep_count++;
+						if(wep_count == 3) active_set = Wep_Hibernate;
+					}
 
-                    // Croc-o-Style Kit
-                    if(
-                        ItemIsEnabled(Wep_CrocoStyle) &&
-                        (StrEqual(classname, "tf_weapon_sniperrifle") &&
-                        (item_index == 230)) ||
-                        (StrEqual(classname, "tf_weapon_club") &&
-                        (item_index == 232))
-                    ) {
-                        wep_count++;
-                        if(wep_count == 2) active_set = Wep_CrocoStyle;
-                    }
+					// Croc-o-Style Kit
+					if(
+						ItemIsEnabled(Wep_CrocoStyle) &&
+						(StrEqual(classname, "tf_weapon_sniperrifle") &&
+						(item_index == 230)) ||
+						(StrEqual(classname, "tf_weapon_club") &&
+						(item_index == 232))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = Wep_CrocoStyle;
+					}
 
-                    // Saharan Spy
-                    if(
-                        ItemIsEnabled(Wep_Saharan) &&
-                        (StrEqual(classname, "tf_weapon_revolver") &&
-                        (item_index == 224)) ||
-                        (StrEqual(classname, "tf_weapon_knife") &&
-                        (item_index == 225 || item_index == 574))
-                    ) {
-                        wep_count++;
-                        if(wep_count == 2) active_set = Wep_Saharan;
-                    }
-                }
-            }
+					// Saharan Spy
+					if(
+						ItemIsEnabled(Wep_Saharan) &&
+						(StrEqual(classname, "tf_weapon_revolver") &&
+						(item_index == 224)) ||
+						(StrEqual(classname, "tf_weapon_knife") &&
+						(item_index == 225 || item_index == 574))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = Wep_Saharan;
+					}
+				}
+			}
 
-            if (active_set)
-            {
-                bool validSet = false;
+			if (active_set)
+			{
+				bool validSet = false;
 
-                //this code can be used if you want cosmetics to be a part of item sets
-                if (active_set == Wep_CrocoStyle)
-                {
-                    int num_wearables = TF2Util_GetPlayerWearableCount(client);
-                    for (int i = 0; i < num_wearables; i++)
-                    {
-                        int wearable = TF2Util_GetPlayerWearable(client, i);
-                        int item_index = GetEntProp(wearable,Prop_Send,"m_iItemDefinitionIndex");
-                        if (
-                            // This code only checks for Darwin's Danger Shield (231)
-                            (item_index == 231)
-                        ) {
-                            validSet = true;
-                            break;
-                        }
-                    }
-                } else {
-                    validSet = true;
-                }
+				//this code can be used if you want cosmetics to be a part of item sets
+				if (active_set == Wep_CrocoStyle)
+				{
+					int num_wearables = TF2Util_GetPlayerWearableCount(client);
+					for (int i = 0; i < num_wearables; i++)
+					{
+						int wearable = TF2Util_GetPlayerWearable(client, i);
+						int item_index = GetEntProp(wearable,Prop_Send,"m_iItemDefinitionIndex");
+						if (
+							// This code only checks for Darwin's Danger Shield (231)
+							(item_index == 231)
+						) {
+							validSet = true;
+							break;
+						}
+					}
+				} else {
+					validSet = true;
+				}
 
-                if (validSet)
-                {
-                    switch (active_set)
-                    {
-                        case Wep_SpDelivery:
-                        {
-                            TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
-                        }
-                        case Wep_Expert:
-                        {
-                            TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced set bonus
-                        }
-                        case Wep_Hibernate:
-                        {
-                            TF2Attrib_SetByDefIndex(client, 491, 0.95); // SET BONUS: dmg taken from crit reduced set bonus
-                        }
-                        case Wep_CrocoStyle:
-                        {
-                            TF2Attrib_SetByDefIndex(client, 176, 1.0); // SET BONUS: no death from headshots
-                        }
-                        case Wep_Saharan:
-                        {
-                            player_weapons[client][Wep_Saharan] = true;
-                            TF2Attrib_SetByDefIndex(client, 159, 0.5); // SET BONUS: cloak blink time penalty
-                            TF2Attrib_SetByDefIndex(client, 160, 1.0); // SET BONUS: quiet unstealth
-                        }
-                    }
-                }
-            }
-        }
+				if (validSet)
+				{
+					switch (active_set)
+					{
+						case Wep_SpDelivery:
+						{
+							TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
+						}
+						case Wep_Expert:
+						{
+							TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced set bonus
+						}
+						case Wep_Hibernate:
+						{
+							TF2Attrib_SetByDefIndex(client, 491, 0.95); // SET BONUS: dmg taken from crit reduced set bonus
+						}
+						case Wep_CrocoStyle:
+						{
+							TF2Attrib_SetByDefIndex(client, 176, 1.0); // SET BONUS: no death from headshots
+						}
+						case Wep_Saharan:
+						{
+							player_weapons[client][Wep_Saharan] = true;
+							TF2Attrib_SetByDefIndex(client, 159, 0.5); // SET BONUS: cloak blink time penalty
+							TF2Attrib_SetByDefIndex(client, 160, 1.0); // SET BONUS: quiet unstealth
+						}
+					}
+				}
+			}
+		}
 
 		{
 			// if player has a drink item, end minicrits and apply hype
