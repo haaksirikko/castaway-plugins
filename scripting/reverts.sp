@@ -2642,11 +2642,11 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 
 		//item sets
 		if (
-			ItemIsEnabled(Wep_CrocoStyle) ||
-			ItemIsEnabled(Wep_Saharan) ||
 			ItemIsEnabled(Wep_SpDelivery) ||
 			ItemIsEnabled(Wep_Expert) ||
-			ItemIsEnabled(Wep_Hibernate)
+			ItemIsEnabled(Wep_Hibernate) ||
+			ItemIsEnabled(Wep_CrocoStyle) ||
+			ItemIsEnabled(Wep_Saharan)
 		) {
 			// reset set bonuses on loadout changes
 			TFClassType client_class = TF2_GetPlayerClass(client);
@@ -2759,9 +2759,9 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 			{
 				bool validSet = false;
 
-				//this code can be used if you want cosmetics to be a part of item sets
 				if (active_set == Wep_CrocoStyle)
 				{
+					// this code can also be used if you want cosmetics to be a part of item sets
 					int num_wearables = TF2Util_GetPlayerWearableCount(client);
 					for (int i = 0; i < num_wearables; i++)
 					{
@@ -2785,18 +2785,22 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					{
 						case Wep_SpDelivery:
 						{
+							player_weapons[client][Wep_SpDelivery] = true;
 							TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
 						}
 						case Wep_Expert:
 						{
+							player_weapons[client][Wep_Expert] = true;
 							TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced set bonus
 						}
 						case Wep_Hibernate:
 						{
+							player_weapons[client][Wep_Hibernate] = true;
 							TF2Attrib_SetByDefIndex(client, 491, 0.95); // SET BONUS: dmg taken from crit reduced set bonus
 						}
 						case Wep_CrocoStyle:
 						{
+							player_weapons[client][Wep_CrocoStyle] = true;
 							TF2Attrib_SetByDefIndex(client, 176, 1.0); // SET BONUS: no death from headshots
 						}
 						case Wep_Saharan:
