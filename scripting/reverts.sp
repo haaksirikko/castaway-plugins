@@ -282,7 +282,7 @@ enum
 	Wep_Airblast,
 	Wep_Airstrike,
 	Wep_Minigun, // All Miniguns
-	Wep_Sword, // All Swords	
+	Wep_Sword, // All Swords
 	Wep_Ambassador,
 	Wep_Atomizer,
 	Wep_Axtinguisher,
@@ -311,14 +311,15 @@ enum
 	Wep_Enforcer,
 	Wep_Pickaxe, // Equalizer
 	Wep_Eviction,
-	Wep_Expert, // Expert's Ordnance
+	Wep_Expert,
 	Wep_FistsSteel,
-	Wep_Cleaver, // Flying Guillotine	
+	Wep_Cleaver, // Flying Guillotine
+	Wep_GasJockey,
 	Wep_MarketGardener,
 	Wep_GRU,
 	Wep_Gunboats,
 	Wep_Zatoichi, // Half-Zatoichi
-	Wep_Hibernate, // Hibernating Bear
+	Wep_Hibernate,
 	Wep_LibertyLauncher,
 	Wep_LochLoad,
 	Wep_LooseCannon,
@@ -333,7 +334,7 @@ enum
 	Wep_Razorback,
 	Wep_RescueRanger,
 	Wep_ReserveShooter,
-	Wep_Bison, // Righteous Bison	
+	Wep_Bison, // Righteous Bison
 	Wep_RocketJumper,
 	Wep_Saharan,
 	Wep_Sandman,
@@ -343,18 +344,18 @@ enum
 	Wep_SydneySleeper,
 	Wep_SodaPopper,
 	Wep_Solemn,
-	Wep_SpDelivery, // Special Delivery (set)
+	Wep_SpDelivery,
 	Wep_SplendidScreen,
 	Wep_Spycicle,
 	Wep_StickyJumper,
 	Wep_Tomislav,
 	Wep_TideTurner,
 	Wep_TribalmansShiv,
-	Wep_Caber, // Ullapool Caber	
+	Wep_Caber, // Ullapool Caber
 	Wep_VitaSaw,
 	Wep_WarriorSpirit,
 	Wep_Wrangler,
-	Wep_EternalReward, // Your Eternal Reward	
+	Wep_EternalReward, // Your Eternal Reward
 	//must always be at the end of the enum!
 	NUM_ITEMS,
 }
@@ -426,7 +427,7 @@ public void OnPluginStart() {
 	ItemDefine("Cozy Camper","cozycamper","Reverted to pre-matchmaking, flinch resist at any charge level", CLASSFLAG_SNIPER, Wep_CozyCamper);
 #endif
 	ItemDefine("Crit-a-Cola", "critcola", "Reverted to pre-matchmaking, +25% movespeed, +10% damage taken, no mark-for-death on attack", CLASSFLAG_SCOUT, Wep_CritCola);
-	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, no death from headshots when above 1 HP. Equip the Sydney Sleeper, DDS and Bushwacka to gain the bonus, Ol' Snaggletooth not required", CLASSFLAG_SNIPER, Wep_CrocoStyle);
+	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, no death from headshots when above 1 HP. Equip the Sydney Sleeper, DDS and Bushwacka to gain the bonus, the hat is not required", CLASSFLAG_SNIPER, Wep_CrocoStyle);
 #if defined VERDIUS_PATCHES
 	ItemDefine("Dalokohs Bar", "dalokohsbar", "Reverted to Gun Mettle update, can now overheal to 400 hp again", CLASSFLAG_HEAVY, Wep_Dalokoh);
 #endif
@@ -449,14 +450,15 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Pickaxe, "Merged back to release; while active: blocks Medic healing, can't call for Medics, no mark-for-death; if 200 max hp: 125 dmg at 58 hp, 150 dmg at 20 hp, 162 dmg at 1 hp");
 	ItemDefine("Eviction Notice", "eviction", "Reverted to pre-inferno, no health drain, +20% damage taken", CLASSFLAG_HEAVY, Wep_Eviction);
 	ItemVariant(Wep_Eviction, "Reverted to gunmettle, +50% faster firing speed, no 20% dmg vuln, no health drain, no move speed bonus");
-	ItemDefine("Expert's Ordnance", "expert", "Restored release item set bonus. +10% fire resist. Equip the Loch-n-Load and Ullapool Caber to gain the bonus, Scotch Bonnet not required", CLASSFLAG_DEMOMAN, Wep_Expert);
+	ItemDefine("Expert's Ordnance", "expert", "Restored release item set bonus. +10% fire resist. Equip the Loch-n-Load and Ullapool Caber to gain the bonus, the hat is not required", CLASSFLAG_DEMOMAN, Wep_Expert);
 	ItemDefine("Fists of Steel", "fiststeel", "Reverted to pre-inferno, no healing penalties", CLASSFLAG_HEAVY, Wep_FistsSteel);
 	ItemDefine("Flying Guillotine", "guillotine", "Reverted to pre-inferno, stun crits, distance mini-crits, no recharge", CLASSFLAG_SCOUT, Wep_Cleaver);
+	ItemDefine("Gas Jockey's Gear", "gasjockey", "Restored release item set bonus, +10% movespeed and bullet vuln. Equip the Degreaser and Powerjack to gain the bonus, the hat is not required", CLASSFLAG_PYRO, Wep_GasJockey);
 	ItemDefine("Gloves of Running Urgently", "glovesru", "Reverted to pre-toughbreak, no health drain or holster penalty, marks for death, -25% damage", CLASSFLAG_HEAVY, Wep_GRU);
 	ItemVariant(Wep_GRU, "Reverted to pre-pyromania, no health drain, no mark-for-death, 50% dmg penalty, -6hp/s while active, jump a bit higher every -6hp/s");
 	ItemDefine("Gunboats", "gunboats", "Reverted to release, -75% blast damage from rocket jumps", CLASSFLAG_SOLDIER, Wep_Gunboats);
 	ItemDefine("Half-Zatoichi", "zatoichi", "Reverted to pre-toughbreak, fast switch, less range, cannot switch until kill, full heal, has random crits", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_Zatoichi);
-	ItemDefine("Hibernating Bear", "hibernate", "Restored release item set bonus, +5% crit resist. Equip the Brass Beast, Buffalo Steak Sandvich and Warrior's Spirit to gain the bonus, Big Chief not required", CLASSFLAG_HEAVY, Wep_Hibernate);
+	ItemDefine("Hibernating Bear", "hibernate", "Restored release item set bonus, +5% crit resist. Equip the Brass Beast, Buffalo Steak Sandvich and Warrior's Spirit to gain the bonus, the hat is not required", CLASSFLAG_HEAVY, Wep_Hibernate);
 	ItemDefine("Liberty Launcher", "liberty", "Reverted to release, +40% projectile speed, -25% clip size", CLASSFLAG_SOLDIER, Wep_LibertyLauncher);
 	ItemDefine("Loch-n-Load", "lochload", "Reverted to pre-gunmettle, +20% damage against everything", CLASSFLAG_DEMOMAN, Wep_LochLoad);
 	ItemVariant(Wep_LochLoad, "Reverted to pre-2014, +20% damage (15% variance), -50% clip, +25% self dmg, no radius penalty, grenades tumble");
@@ -487,7 +489,7 @@ public void OnPluginStart() {
 	ItemDefine("Righteous Bison", "bison", "Reverted to pre-matchmaking, increased hitbox size, can hit the same player more times", CLASSFLAG_SOLDIER, Wep_Bison);
 	ItemDefine("Rocket Jumper", "rocketjmp", "Reverted to pre-2013, grants immunity to self-damage from Equalizer/Escape Plan taunt", CLASSFLAG_SOLDIER, Wep_RocketJumper);
 	ItemVariant(Wep_RocketJumper, "Reverted to pre-2013, grants immunity to self-damage from Equalizer/Escape Plan taunt, wearer can pick up intel");
-	ItemDefine("Saharan Spy", "saharan", "Restored release item set bonus, quiet decloak, 0.5s longer cloak blink time. Equip the L'Etranger and YER to gain the bonus, Familiar Fez not required", CLASSFLAG_SPY, Wep_Saharan);
+	ItemDefine("Saharan Spy", "saharan", "Restored release item set bonus, quiet decloak, 0.5s longer cloak blink time. Equip the L'Etranger and YER to gain the bonus, the hat is not required", CLASSFLAG_SPY, Wep_Saharan);
 	ItemDefine("Sandman", "sandman", "Reverted to pre-inferno, stuns players on hit again, 15 sec ball recharge time", CLASSFLAG_SCOUT, Wep_Sandman);
 	ItemDefine("Scottish Resistance", "scottish", "Reverted to release, 0.4 arm time penalty (from 0.8), no fire rate bonus", CLASSFLAG_DEMOMAN, Wep_Scottish);
 	ItemDefine("Short Circuit", "circuit", "Reverted to pre-matchmaking, alt-fire destroys projectiles in front, costs 15 metal per shot", CLASSFLAG_ENGINEER, Wep_ShortCircuit);
@@ -497,7 +499,7 @@ public void OnPluginStart() {
 	ItemDefine("Soda Popper", "sodapop", "Reverted to pre-Smissmas 2013, run to build hype and auto gain minicrits", CLASSFLAG_SCOUT, Wep_SodaPopper);
 	ItemVariant(Wep_SodaPopper, "Reverted to pre-matchmaking, run to build hype");
 	ItemDefine("Solemn Vow", "solemn", "Reverted to pre-gunmettle, firing speed penalty removed", CLASSFLAG_MEDIC, Wep_Solemn);
-	ItemDefine("Special Delivery (set)", "spdelivery", "Restored release item set bonus, +25 max health. Equip the Shortstop, Mad Milk and Holy Mackerel to gain the bonus, Milkman not required", CLASSFLAG_SCOUT, Wep_SpDelivery);
+	ItemDefine("Special Delivery (set)", "spdelivery", "Restored release item set bonus, +25 max health. Equip the Shortstop, Mad Milk and Holy Mackerel to gain the bonus, the hat is not required", CLASSFLAG_SCOUT, Wep_SpDelivery);
 	ItemDefine("Splendid Screen", "splendid", "Reverted to pre-toughbreak, 15% blast resist, no faster recharge, crit after bash, no debuff removal, bash dmg at any range", CLASSFLAG_DEMOMAN, Wep_SplendidScreen);
 	ItemDefine("Spy-cicle", "spycicle", "Reverted to pre-gunmettle, fire immunity for 2s, silent killer, cannot regenerate from ammo sources", CLASSFLAG_SPY, Wep_Spycicle);
 	ItemDefine("Sticky Jumper", "stkjumper", "Reverted to Pyromania update, can have 8 stickybombs out at once again", CLASSFLAG_DEMOMAN, Wep_StickyJumper);
@@ -2735,18 +2737,23 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 		//item sets
 		if (
 			ItemIsEnabled(Wep_SpDelivery) ||
+			ItemIsEnabled(Wep_GasJockey) ||
 			ItemIsEnabled(Wep_Expert) ||
 			ItemIsEnabled(Wep_Hibernate) ||
 			ItemIsEnabled(Wep_CrocoStyle) ||
 			ItemIsEnabled(Wep_Saharan)
 		) {
 			// reset set bonuses on loadout changes
-			TFClassType client_class = TF2_GetPlayerClass(client);
-			switch (client_class)
+			switch (TF2_GetPlayerClass(client))
 			{
 				case TFClass_Scout:
 				{
 					TF2Attrib_SetByDefIndex(client, 517, 0.0); // SET BONUS: max health additive bonus
+				}
+				case TFClass_Pyro:
+				{
+					TF2Attrib_SetByDefIndex(client, 489, 1.0); // SET BONUS: move speed set bonus
+					TF2Attrib_SetByDefIndex(client, 516, 1.0); // SET BONUS: dmg taken from bullets increased 
 				}
 				case TFClass_DemoMan:
 				{
@@ -2793,6 +2800,17 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					) {
 						wep_count++;
 						if(wep_count == 3) active_set = Wep_SpDelivery;
+					}
+
+					if(
+						ItemIsEnabled(Wep_GasJockey) &&
+						(StrEqual(classname, "tf_weapon_flamethrower") &&
+						(item_index == 215)) ||
+						(StrEqual(classname, "tf_weapon_fireaxe") &&
+						(item_index == 214))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = Wep_GasJockey;
 					}
 
 					// Expert's Ordnance
@@ -2879,6 +2897,12 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						{
 							player_weapons[client][Wep_SpDelivery] = true;
 							TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
+						}
+						case Wep_GasJockey:
+						{
+							player_weapons[client][Wep_GasJockey] = true;
+							TF2Attrib_SetByDefIndex(client, 489, 1.10); // SET BONUS: move speed set bonus
+							TF2Attrib_SetByDefIndex(client, 516, 1.10); // SET BONUS: dmg taken from bullets increased
 						}
 						case Wep_Expert:
 						{
