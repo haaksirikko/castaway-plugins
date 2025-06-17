@@ -179,9 +179,6 @@ enum struct Player {
 	bool player_jumped;
 }
 
-//item sets
-#define ItemSet_Saharan 1
-
 enum struct Entity {
 	bool exists;
 	float spawn_time;
@@ -304,6 +301,7 @@ enum
 	Wep_Claidheamh,
 	Wep_CleanerCarbine,
 	Wep_CritCola,
+	Wep_CrocoStyle,
 	Wep_Dalokoh,
 	Wep_Darwin,
 	Wep_DeadRinger,	
@@ -313,12 +311,14 @@ enum
 	Wep_Enforcer,
 	Wep_Pickaxe, // Equalizer
 	Wep_Eviction,
+	Wep_Expert, // Expert's Ordnance
 	Wep_FistsSteel,
 	Wep_Cleaver, // Flying Guillotine	
 	Wep_MarketGardener,
 	Wep_GRU,
 	Wep_Gunboats,
 	Wep_Zatoichi, // Half-Zatoichi
+	Wep_Hibernate, // Hibernating Bear
 	Wep_LibertyLauncher,
 	Wep_LochLoad,
 	Wep_LooseCannon,
@@ -343,6 +343,7 @@ enum
 	Wep_SydneySleeper,
 	Wep_SodaPopper,
 	Wep_Solemn,
+	Wep_SpDelivery, // Special Delivery (set)
 	Wep_SplendidScreen,
 	Wep_Spycicle,
 	Wep_StickyJumper,
@@ -425,11 +426,12 @@ public void OnPluginStart() {
 	ItemDefine("Cozy Camper","cozycamper","Reverted to pre-matchmaking, flinch resist at any charge level", CLASSFLAG_SNIPER, Wep_CozyCamper);
 #endif
 	ItemDefine("Crit-a-Cola", "critcola", "Reverted to pre-matchmaking, +25% movespeed, +10% damage taken, no mark-for-death on attack", CLASSFLAG_SCOUT, Wep_CritCola);
+	ItemDefine("Croc-o-Style Kit", "crocostyle", "Restored release item set bonus, no death from headshots when above 1 HP. Equip the Sydney Sleeper, DDS and Bushwacka to gain the bonus, Ol' Snaggletooth not required", CLASSFLAG_SNIPER, Wep_CrocoStyle);
 #if defined VERDIUS_PATCHES
 	ItemDefine("Dalokohs Bar", "dalokohsbar", "Reverted to Gun Mettle update, can now overheal to 400 hp again", CLASSFLAG_HEAVY, Wep_Dalokoh);
 #endif
-	ItemDefine("Darwin's Danger Shield", "darwin", "Reverted to pre-inferno, +25 max hp, 15% bullet resist (4.7% against crit bullets), 20% blast vuln, no fire resists", CLASSFLAG_SNIPER, Wep_Darwin);
-	ItemVariant(Wep_Darwin, "Reverted to pre-2013, +25 max health, no damage modifiers or afterburn immunity");
+	ItemDefine("Darwin's Danger Shield", "darwin", "Reverted to pre-2013, +25 max health, no damage modifiers or afterburn immunity", CLASSFLAG_SNIPER, Wep_Darwin);
+	ItemVariant(Wep_Darwin, "Reverted to pre-inferno, +25 max hp, 15% bullet resist (4.7% against crit bullets), 20% blast vuln, no fire resists");
 	ItemDefine("Dead Ringer", "ringer", "Reverted to pre-gunmettle, can pick up ammo, 90% dmg resist for up to 6.5s (reduced by dmg taken)", CLASSFLAG_SPY, Wep_DeadRinger);
 	ItemDefine("Degreaser", "degreaser", "Reverted to pre-toughbreak, 65% faster weapon switch, -10% dmg & -25% afterburn dmg penalties", CLASSFLAG_PYRO, Wep_Degreaser);
 #if defined VERDIUS_PATCHES
@@ -447,12 +449,14 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Pickaxe, "Merged back to release; while active: blocks Medic healing, can't call for Medics, no mark-for-death; if 200 max hp: 125 dmg at 58 hp, 150 dmg at 20 hp, 162 dmg at 1 hp");
 	ItemDefine("Eviction Notice", "eviction", "Reverted to pre-inferno, no health drain, +20% damage taken", CLASSFLAG_HEAVY, Wep_Eviction);
 	ItemVariant(Wep_Eviction, "Reverted to gunmettle, +50% faster firing speed, no 20% dmg vuln, no health drain, no move speed bonus");
+	ItemDefine("Expert's Ordnance", "expert", "Restored release item set bonus. +10% fire resist. Equip the Loch-n-Load and Ullapool Caber to gain the bonus, Scotch Bonnet not required", CLASSFLAG_DEMOMAN, Wep_Expert);
 	ItemDefine("Fists of Steel", "fiststeel", "Reverted to pre-inferno, no healing penalties", CLASSFLAG_HEAVY, Wep_FistsSteel);
 	ItemDefine("Flying Guillotine", "guillotine", "Reverted to pre-inferno, stun crits, distance mini-crits, no recharge", CLASSFLAG_SCOUT, Wep_Cleaver);
 	ItemDefine("Gloves of Running Urgently", "glovesru", "Reverted to pre-toughbreak, no health drain or holster penalty, marks for death, -25% damage", CLASSFLAG_HEAVY, Wep_GRU);
 	ItemVariant(Wep_GRU, "Reverted to pre-pyromania, no health drain, no mark-for-death, 50% dmg penalty, -6hp/s while active, jump a bit higher every -6hp/s");
 	ItemDefine("Gunboats", "gunboats", "Reverted to release, -75% blast damage from rocket jumps", CLASSFLAG_SOLDIER, Wep_Gunboats);
 	ItemDefine("Half-Zatoichi", "zatoichi", "Reverted to pre-toughbreak, fast switch, less range, cannot switch until kill, full heal, has random crits", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_Zatoichi);
+	ItemDefine("Hibernating Bear", "hibernate", "Restored release item set bonus, +5% crit resist. Equip the Brass Beast, Buffalo Steak Sandvich and Warrior's Spirit to gain the bonus, Big Chief not required", CLASSFLAG_HEAVY, Wep_Hibernate);
 	ItemDefine("Liberty Launcher", "liberty", "Reverted to release, +40% projectile speed, -25% clip size", CLASSFLAG_SOLDIER, Wep_LibertyLauncher);
 	ItemDefine("Loch-n-Load", "lochload", "Reverted to pre-gunmettle, +20% damage against everything", CLASSFLAG_DEMOMAN, Wep_LochLoad);
 	ItemVariant(Wep_LochLoad, "Reverted to pre-2014, +20% damage (15% variance), -50% clip, +25% self dmg, no radius penalty, grenades tumble");
@@ -493,6 +497,7 @@ public void OnPluginStart() {
 	ItemDefine("Soda Popper", "sodapop", "Reverted to pre-Smissmas 2013, run to build hype and auto gain minicrits", CLASSFLAG_SCOUT, Wep_SodaPopper);
 	ItemVariant(Wep_SodaPopper, "Reverted to pre-matchmaking, run to build hype");
 	ItemDefine("Solemn Vow", "solemn", "Reverted to pre-gunmettle, firing speed penalty removed", CLASSFLAG_MEDIC, Wep_Solemn);
+	ItemDefine("Special Delivery (set)", "spdelivery", "Restored release item set bonus, +25 max health. Equip the Shortstop, Mad Milk and Holy Mackerel to gain the bonus, Milkman not required", CLASSFLAG_SCOUT, Wep_SpDelivery);
 	ItemDefine("Splendid Screen", "splendid", "Reverted to pre-toughbreak, 15% blast resist, no faster recharge, crit after bash, no debuff removal, bash dmg at any range", CLASSFLAG_DEMOMAN, Wep_SplendidScreen);
 	ItemDefine("Spy-cicle", "spycicle", "Reverted to pre-gunmettle, fire immunity for 2s, silent killer, cannot regenerate from ammo sources", CLASSFLAG_SPY, Wep_Spycicle);
 	ItemDefine("Sticky Jumper", "stkjumper", "Reverted to Pyromania update, can have 8 stickybombs out at once again", CLASSFLAG_DEMOMAN, Wep_StickyJumper);
@@ -1913,7 +1918,7 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 		case 231: { if (ItemIsEnabled(Wep_Darwin)) {
 			item1 = TF2Items_CreateItem(0);
 			TF2Items_SetFlags(item1, (OVERRIDE_ATTRIBUTES|PRESERVE_ATTRIBUTES));
-			bool dmg_mods = GetItemVariant(Wep_Darwin) == 0;
+			bool dmg_mods = GetItemVariant(Wep_Darwin) == 1;
 			TF2Items_SetNumAttributes(item1, dmg_mods ? 5 : 3);
 			TF2Items_SetAttribute(item1, 0, 60, 1.0); // +0% fire damage resistance on wearer
 			TF2Items_SetAttribute(item1, 1, 527, 0.0); // remove afterburn immunity
@@ -2729,19 +2734,38 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 
 		//item sets
 		if (
+			ItemIsEnabled(Wep_SpDelivery) ||
+			ItemIsEnabled(Wep_Expert) ||
+			ItemIsEnabled(Wep_Hibernate) ||
+			ItemIsEnabled(Wep_CrocoStyle) ||
 			ItemIsEnabled(Wep_Saharan)
 		) {
 			// reset set bonuses on loadout changes
 			TFClassType client_class = TF2_GetPlayerClass(client);
 			switch (client_class)
 			{
+				case TFClass_Scout:
+				{
+					TF2Attrib_SetByDefIndex(client, 517, 0.0); // SET BONUS: max health additive bonus
+				}
+				case TFClass_DemoMan:
+				{
+					TF2Attrib_SetByDefIndex(client, 492, 1.0); // SET BONUS: dmg taken from fire reduced set bonus
+				}
+				case TFClass_Heavy:
+				{
+					TF2Attrib_SetByDefIndex(client, 491, 1.0); // SET BONUS: dmg taken from crit reduced set bonus
+				}
+				case TFClass_Sniper:
+				{
+					TF2Attrib_SetByDefIndex(client, 176, 0.0); // SET BONUS: no death from headshots
+				}
 				case TFClass_Spy:
 				{
 					TF2Attrib_SetByDefIndex(client, 159, 0.0); // SET BONUS: cloak blink time penalty
 					TF2Attrib_SetByDefIndex(client, 160, 0.0); // SET BONUS: quiet unstealth
 				}
 			}
-
 
 			//handle item sets
 			int wep_count = 0;
@@ -2757,6 +2781,58 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					GetEntityClassname(weapon, classname, sizeof(class));
 					int item_index = GetEntProp(weapon,Prop_Send,"m_iItemDefinitionIndex");
 
+					// Special Delivery (set)
+					if(
+						ItemIsEnabled(Wep_SpDelivery) &&
+						(StrEqual(classname, "tf_weapon_handgun_scout_primary") &&
+						(item_index == 220)) ||
+						(StrEqual(classname, "tf_weapon_jar_milk") &&
+						(item_index == 222)) ||
+						(StrEqual(classname, "tf_weapon_bat_fish") &&
+						(item_index == 221))
+					) {
+						wep_count++;
+						if(wep_count == 3) active_set = Wep_SpDelivery;
+					}
+
+					// Expert's Ordnance
+					if(
+						ItemIsEnabled(Wep_Expert) &&
+						(StrEqual(classname, "tf_weapon_grenadelauncher") &&
+						(item_index == 308)) ||
+						(StrEqual(classname, "tf_weapon_stickbomb") &&
+						(item_index == 307))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = Wep_Expert;
+					}
+
+					// Hibernating Bear
+					if(
+						ItemIsEnabled(Wep_Hibernate) &&
+						(StrEqual(classname, "tf_weapon_minigun") &&
+						(item_index == 312)) ||
+						(StrEqual(classname, "tf_weapon_lunchbox") &&
+						(item_index == 311)) ||
+						(StrEqual(classname, "tf_weapon_fists") &&
+						(item_index == 310))
+					) {
+						wep_count++;
+						if(wep_count == 3) active_set = Wep_Hibernate;
+					}
+
+					// Croc-o-Style Kit
+					if(
+						ItemIsEnabled(Wep_CrocoStyle) &&
+						(StrEqual(classname, "tf_weapon_sniperrifle") &&
+						(item_index == 230)) ||
+						(StrEqual(classname, "tf_weapon_club") &&
+						(item_index == 232))
+					) {
+						wep_count++;
+						if(wep_count == 2) active_set = Wep_CrocoStyle;
+					}
+
 					// Saharan Spy
 					if(
 						ItemIsEnabled(Wep_Saharan) &&
@@ -2766,36 +2842,60 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						(item_index == 225 || item_index == 574))
 					) {
 						wep_count++;
-						if(wep_count == 2) active_set = ItemSet_Saharan;
+						if(wep_count == 2) active_set = Wep_Saharan;
 					}
 				}
 			}
 
 			if (active_set)
 			{
-				bool validSet = true;
+				bool validSet = false;
 
-				//this code can be used if you want cosmetics to be a part of item sets
-				// bool validSet = false;
-				// int num_wearables = TF2Util_GetPlayerWearableCount(client);
-				// for (int i = 0; i < num_wearables; i++)
-				// {
-				// 	int wearable = TF2Util_GetPlayerWearable(client, i);
-				// 	int item_index = GetEntProp(wearable,Prop_Send,"m_iItemDefinitionIndex");
-				// 	if(
-				// 		(active_set == ItemSet_Saharan) &&
-				// 		(item_index == 223)
-				// 	) {
-				// 		validSet = true;
-				// 		break;
-				// 	}
-				// }
+				if (active_set == Wep_CrocoStyle)
+				{
+					// this code can also be used if you want cosmetics to be a part of item sets
+					int num_wearables = TF2Util_GetPlayerWearableCount(client);
+					for (int i = 0; i < num_wearables; i++)
+					{
+						int wearable = TF2Util_GetPlayerWearable(client, i);
+						int item_index = GetEntProp(wearable,Prop_Send,"m_iItemDefinitionIndex");
+						if (
+							// This code only checks for Darwin's Danger Shield (231)
+							(item_index == 231)
+						) {
+							validSet = true;
+							break;
+						}
+					}
+				} else {
+					validSet = true;
+				}
 
 				if (validSet)
 				{
 					switch (active_set)
 					{
-						case ItemSet_Saharan:
+						case Wep_SpDelivery:
+						{
+							player_weapons[client][Wep_SpDelivery] = true;
+							TF2Attrib_SetByDefIndex(client, 517, 25.0); // SET BONUS: max health additive bonus
+						}
+						case Wep_Expert:
+						{
+							player_weapons[client][Wep_Expert] = true;
+							TF2Attrib_SetByDefIndex(client, 492, 0.90); // SET BONUS: dmg taken from fire reduced set bonus
+						}
+						case Wep_Hibernate:
+						{
+							player_weapons[client][Wep_Hibernate] = true;
+							TF2Attrib_SetByDefIndex(client, 491, 0.95); // SET BONUS: dmg taken from crit reduced set bonus
+						}
+						case Wep_CrocoStyle:
+						{
+							player_weapons[client][Wep_CrocoStyle] = true;
+							TF2Attrib_SetByDefIndex(client, 176, 1.0); // SET BONUS: no death from headshots
+						}
+						case Wep_Saharan:
 						{
 							player_weapons[client][Wep_Saharan] = true;
 							TF2Attrib_SetByDefIndex(client, 159, 0.5); // SET BONUS: cloak blink time penalty
