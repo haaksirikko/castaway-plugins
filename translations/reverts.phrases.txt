@@ -503,6 +503,14 @@
 	{
 		"en"	"Reverted to pre-matchmaking, +25%% movespeed, +10%% damage taken, no mark-for-death on attack"
 	}
+	"CritCola_1"
+	{
+		"en"	"Reverted to pre-inferno, +25%% movespeed, +10%% damage taken, mark-for-death after effect ends"
+	}
+	"CritCola_2"
+	{
+		"en"	"Reverted to pre-Smissmas 2013, +25%% movespeed, +25%% damage taken, no mark-for-death on attack"
+	}
 	"DalokohsBar_0"
 	{
 		"en"	"Reverted to Gun Mettle update, can now overheal to 400 hp again"
