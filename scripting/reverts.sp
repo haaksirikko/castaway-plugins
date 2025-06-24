@@ -1748,7 +1748,6 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 			(GetItemVariant(Wep_CritCola) == 3) &&
 			TF2_GetPlayerClass(client) == TFClass_Scout &&
 			condition == TFCond_CritCola
-			
 		) {
 			// Generate a random integer from the set {3, 5, 6, 7}
 			int randomInt = GetRandomInt(1, 4); // Generate a number between 1 and 4
