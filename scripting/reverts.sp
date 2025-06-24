@@ -1750,13 +1750,31 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 			condition == TFCond_CritCola
 			
 		) {
-			int randomInt = GetRandomInt(1,7);
+			// Generate a random integer from the set {3, 5, 6, 7}
+			int randomInt = GetRandomInt(1, 4); // Generate a number between 1 and 4
+
+			// Adjust the random value to select 3, 5, 6, or 7
+			if (randomInt == 1) {
+				randomInt = 3;
+			} else if (randomInt == 2) {
+				randomInt = 5;
+			} else if (randomInt == 3) {
+				randomInt = 6;
+			} else {
+				randomInt = 7;
+			}
+			// PrintToChatAll("randomInt: %i", randomInt); //debug
+			// Format the string with the chosen number
 			char soundString[64];
 			Format(soundString, sizeof(soundString), "Scout.InvincibleNotReady%02d", randomInt);
+
+			// Emit the sound using the constructed string
 			EmitGameSoundToAll(soundString, client);
-			// This is not supposed to play when Scout touches the resupply cabinet, but this bug is good for quickly testing.
+
+			// This is not supposed to play when Scout touches the resupply cabinet, but this bug is good for testing.
 			// There are 7 Scout.InvicibleNotReady0# game sounds. 
 			// The TF2 wiki mentions only using 3, 5, 6, and 7 in which Scout says something when the crit a cola effects are gone.
+			// Also there are unknown voice lines where Scout deeply exhales and inhales after the buff wears off. I cannot seem to find it.
 			
 		}
 	}
