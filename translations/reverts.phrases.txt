@@ -511,6 +511,10 @@
 	{
 		"en"	"Reverted to pre-Smissmas 2013, +25%% movespeed, +25%% damage taken, no mark-for-death on attack"
 	}
+	"CritCola_3"
+	{
+		"en"	"Reverted to release, no movespeed bonus, minicrits on damage taken, buff lasts 6 seconds"
+	}	
 	"DalokohsBar_0"
 	{
 		"en"	"Reverted to Gun Mettle update, can now overheal to 400 hp again"

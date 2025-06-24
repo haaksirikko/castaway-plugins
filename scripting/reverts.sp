@@ -432,6 +432,7 @@ public void OnPluginStart() {
 	ItemDefine("critcola", "CritCola_0", CLASSFLAG_SCOUT, Wep_CritCola);
 	ItemVariant(Wep_CritCola, "CritCola_1");
 	ItemVariant(Wep_CritCola, "CritCola_2");
+	ItemVariant(Wep_CritCola, "CritCola_3");
 #if defined MEMORY_PATCHES
 	ItemDefine("dalokohsbar", "DalokohsBar_0", CLASSFLAG_HEAVY, Wep_Dalokoh);
 #endif
@@ -1707,11 +1708,24 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 			TF2_GetPlayerClass(client) == TFClass_Heavy &&
 			condition == TFCond_RestrictToMelee &&
 			TF2_IsPlayerInCondition(client, TFCond_CritCola)
-		) {			
+		) {
 			TF2_AddCondition(client, TFCond_MarkedForDeathSilent); // historically didn't have the Marked-for-Death symbol in HUD, but a visual cue is good
 		}
 	}
 
+	{
+		// release crit-a-cola minicrit on damage taken and reduce buff duration to 6 seconds
+		if (
+			ItemIsEnabled(Wep_CritCola) &&
+			(GetItemVariant(Wep_CritCola) == 3) &&
+			TF2_GetPlayerClass(client) == TFClass_Scout &&
+			TF2_IsPlayerInCondition(client, TFCond_CritCola)
+		) {
+			TF2_AddCondition(client, TFCond_MarkedForDeathSilent, 6.0); // historically didn't have the Marked-for-Death symbol in HUD, but a visual cue is good
+			TF2_RemoveCondition(client, TFCond_CritCola);
+			TF2_AddCondition(client, TFCond_CritCola, 6.0); // Scout doesn't play voicelines after effect wears off though
+		}
+	}
 }
 
 public void TF2_OnConditionRemoved(int client, TFCond condition) {
@@ -1728,6 +1742,45 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	}
 
 	{
+		// when release crit-a-cola minicrit condition is removed, play Scout voicelines
+		if (
+			ItemIsEnabled(Wep_CritCola) &&
+			(GetItemVariant(Wep_CritCola) == 3) &&
+			TF2_GetPlayerClass(client) == TFClass_Scout &&
+			condition == TFCond_CritCola
+		) {
+			// Generate a random integer from the set {3, 5, 6, 7}
+			int randomInt = GetRandomInt(1, 4); // Generate a number between 1 and 4
+
+			// Adjust the random value to select 3, 5, 6, or 7	
+			switch(randomInt) {
+				case 1:
+					randomInt = 3;
+				case 2:
+					randomInt = 5;
+				case 3:
+					randomInt = 6;
+				case 4:
+					randomInt = 7;
+			}
+
+			// PrintToChatAll("randomInt: %i", randomInt); //debug
+			// Format the string with the chosen number
+			char soundString[64];
+			Format(soundString, sizeof(soundString), "Scout.InvincibleNotReady%02d", randomInt);
+
+			// Emit the sound using the constructed string
+			EmitGameSoundToAll(soundString, client);
+
+			// This is not supposed to play when Scout touches the resupply cabinet, but this bug is good for testing.
+			// There are 7 Scout.InvicibleNotReady0# game sounds. 
+			// The TF2 wiki mentions only using 3, 5, 6, and 7 in which Scout says something when the crit a cola effects are gone.
+			// Also there are unknown voice lines where Scout deeply exhales and inhales after the buff wears off. I cannot seem to find it.
+			
+		}
+	}
+
+	{
 		// buffalo steak sandvich marked-for-death effect removal
 		if (
 			ItemIsEnabled(Wep_BuffaloSteak) &&
@@ -1738,9 +1791,8 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 			TF2_IsPlayerInCondition(client, TFCond_MarkedForDeathSilent)
 		) {
 			TF2_RemoveCondition(client, TFCond_MarkedForDeathSilent);
-		}			
+		}
 	}
-
 }
 
 public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &provider) {
@@ -1916,8 +1968,13 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 814, 0.0); // no mark-for-death on attack
 			// +25% or +10% damage vulnerability while under the effect, depending on variant
-			float vuln = GetItemVariant(Wep_CritCola) == 2 ? 1.25 : 1.10;
-			TF2Items_SetAttribute(itemNew, 1, 798, vuln);
+			if (GetItemVariant(Wep_CritCola) != 3) {
+				float vuln = GetItemVariant(Wep_CritCola) == 2 ? 1.25 : 1.10;
+				TF2Items_SetAttribute(itemNew, 1, 798, vuln);
+			}
+			else if (GetItemVariant(Wep_CritCola) == 3) {
+				TF2Items_SetAttribute(itemNew, 1, 798, 1.00);
+			}
 		}}
 		case 231: { if (ItemIsEnabled(Wep_Darwin)) {
 			bool dmg_mods = GetItemVariant(Wep_Darwin) == 0;
@@ -4539,7 +4596,8 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed(int entity, DHookReturn ret
 			if (
 				ItemIsEnabled(Wep_CritCola) &&
 				TF2_IsPlayerInCondition(entity, TFCond_CritCola) &&
-				player_weapons[entity][Wep_CritCola]
+				player_weapons[entity][Wep_CritCola] &&
+				(GetItemVariant(Wep_CritCola) != 3) // don't use speedboost with release crit-a-cola
 			) {
 				// Crit-a-Cola speed boost.
 				multiplier *= 1.25;
