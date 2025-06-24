@@ -1753,16 +1753,18 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 			// Generate a random integer from the set {3, 5, 6, 7}
 			int randomInt = GetRandomInt(1, 4); // Generate a number between 1 and 4
 
-			// Adjust the random value to select 3, 5, 6, or 7
-			if (randomInt == 1) {
-				randomInt = 3;
-			} else if (randomInt == 2) {
-				randomInt = 5;
-			} else if (randomInt == 3) {
-				randomInt = 6;
-			} else {
-				randomInt = 7;
+			// Adjust the random value to select 3, 5, 6, or 7	
+			switch(randomInt) {
+				case 1:
+					randomInt = 3;
+				case 2:
+					randomInt = 5;
+				case 3:
+					randomInt = 6;
+				case 4:
+					randomInt = 7;
 			}
+
 			// PrintToChatAll("randomInt: %i", randomInt); //debug
 			// Format the string with the chosen number
 			char soundString[64];
