@@ -1742,6 +1742,26 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	}
 
 	{
+		// when release crit-a-cola minicrit condition is removed, play Scout voicelines
+		if (
+			ItemIsEnabled(Wep_CritCola) &&
+			(GetItemVariant(Wep_CritCola) == 3) &&
+			TF2_GetPlayerClass(client) == TFClass_Scout &&
+			condition == TFCond_CritCola
+			
+		) {
+			int randomInt = GetRandomInt(1,7);
+			char soundString[64];
+			Format(soundString, sizeof(soundString), "Scout.InvincibleNotReady%02d", randomInt);
+			EmitGameSoundToAll(soundString, client);
+			// This is not supposed to play when Scout touches the resupply cabinet, but this bug is good for quickly testing.
+			// There are 7 Scout.InvicibleNotReady0# game sounds. 
+			// The TF2 wiki mentions only using 3, 5, 6, and 7 in which Scout says something when the crit a cola effects are gone.
+			
+		}
+	}
+
+	{
 		// buffalo steak sandvich marked-for-death effect removal
 		if (
 			ItemIsEnabled(Wep_BuffaloSteak) &&
