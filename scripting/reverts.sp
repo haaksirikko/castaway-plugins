@@ -430,6 +430,9 @@ public void OnPluginStart() {
 	ItemDefine("cozycamper","CozyCamper_0", CLASSFLAG_SNIPER, Wep_CozyCamper);
 #endif
 	ItemDefine("critcola", "CritCola_0", CLASSFLAG_SCOUT, Wep_CritCola);
+	ItemVariant(Wep_CritCola, "CritCola_1");
+	ItemVariant(Wep_CritCola, "CritCola_2");
+	ItemVariant(Wep_CritCola, "CritCola_3");
 #if defined MEMORY_PATCHES
 	ItemDefine("dalokohsbar", "DalokohsBar_0", CLASSFLAG_HEAVY, Wep_Dalokoh);
 #endif
@@ -1705,11 +1708,24 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 			TF2_GetPlayerClass(client) == TFClass_Heavy &&
 			condition == TFCond_RestrictToMelee &&
 			TF2_IsPlayerInCondition(client, TFCond_CritCola)
-		) {			
+		) {
 			TF2_AddCondition(client, TFCond_MarkedForDeathSilent); // historically didn't have the Marked-for-Death symbol in HUD, but a visual cue is good
 		}
 	}
 
+	{
+		// release crit-a-cola minicrit on damage taken and reduce buff duration to 6 seconds
+		if (
+			ItemIsEnabled(Wep_CritCola) &&
+			(GetItemVariant(Wep_CritCola) == 3) &&
+			TF2_GetPlayerClass(client) == TFClass_Scout &&
+			TF2_IsPlayerInCondition(client, TFCond_CritCola)
+		) {
+			TF2_AddCondition(client, TFCond_MarkedForDeathSilent, 6.0); // historically didn't have the Marked-for-Death symbol in HUD, but a visual cue is good
+			TF2_RemoveCondition(client, TFCond_CritCola);
+			TF2_AddCondition(client, TFCond_CritCola, 6.0); // Scout doesn't play voicelines after effect wears off though
+		}
+	}
 }
 
 public void TF2_OnConditionRemoved(int client, TFCond condition) {
@@ -1736,9 +1752,8 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 			TF2_IsPlayerInCondition(client, TFCond_MarkedForDeathSilent)
 		) {
 			TF2_RemoveCondition(client, TFCond_MarkedForDeathSilent);
-		}			
+		}
 	}
-
 }
 
 public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &provider) {
@@ -1777,6 +1792,17 @@ public Action TF2_OnRemoveCond(int client, TFCond &condition, float &timeleft, i
 				if (condition == debuffs[i])
 					return Plugin_Handled;
 			}
+		}
+	}
+	{
+		// pre-inferno crit-a-cola mark-for-death on expire
+		if (
+			GetItemVariant(Wep_CritCola) == 1 &&
+			TF2_GetPlayerClass(client) == TFClass_Scout &&
+			condition == TFCond_CritCola &&
+			GetEntPropFloat(client, Prop_Send, "m_flEnergyDrinkMeter") <= 0.0
+		) {
+			TF2_AddCondition(client, TFCond_MarkedForDeathSilent, 2.0, 0);
 		}
 	}
 	return Plugin_Continue;
@@ -1902,7 +1928,14 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 		case 163: { if (ItemIsEnabled(Wep_CritCola)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 814, 0.0); // no mark-for-death on attack
-			TF2Items_SetAttribute(itemNew, 1, 798, 1.10); // +10% damage vulnerability while under the effect
+			// +25% or +10% damage vulnerability while under the effect, depending on variant
+			if (GetItemVariant(Wep_CritCola) != 3) {
+				float vuln = GetItemVariant(Wep_CritCola) == 2 ? 1.25 : 1.10;
+				TF2Items_SetAttribute(itemNew, 1, 798, vuln);
+			}
+			else if (GetItemVariant(Wep_CritCola) == 3) {
+				TF2Items_SetAttribute(itemNew, 1, 798, 1.00);
+			}
 		}}
 		case 231: { if (ItemIsEnabled(Wep_Darwin)) {
 			bool dmg_mods = GetItemVariant(Wep_Darwin) == 0;
@@ -2733,11 +2766,16 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 				GetItemVariant(Wep_SodaPopper) == 0 &&
 				players[client].is_under_hype
 			) {
-				bool has_lunchbox = (player_weapons[client][Wep_Bonk] || player_weapons[client][Wep_CritCola]);
-				if (has_lunchbox)
-				{
+				if (player_weapons[client][Wep_SodaPopper]) {
+					if (
+						player_weapons[client][Wep_Bonk] ||
+						player_weapons[client][Wep_CritCola]
+					){
+						players[client].is_under_hype = false;
+						TF2_AddCondition(client, TFCond_CritHype, 11.0, 0);
+					}
+				} else {
 					players[client].is_under_hype = false;
-					TF2_AddCondition(client, TFCond_CritHype, 11.0, 0);
 				}
 			}
 		}
@@ -4519,7 +4557,8 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed(int entity, DHookReturn ret
 			if (
 				ItemIsEnabled(Wep_CritCola) &&
 				TF2_IsPlayerInCondition(entity, TFCond_CritCola) &&
-				player_weapons[entity][Wep_CritCola]
+				player_weapons[entity][Wep_CritCola] &&
+				(GetItemVariant(Wep_CritCola) != 3) // don't use speedboost with release crit-a-cola
 			) {
 				// Crit-a-Cola speed boost.
 				multiplier *= 1.25;
