@@ -104,7 +104,9 @@ public Plugin myinfo = {
 #define CLASSFLAG_SPY		(1 << 7)
 #define CLASSFLAG_ENGINEER	(1 << 8)
 
-#define ITEMFLAG_DISABLED	(1 << 9) // Disabled by default
+#define ITEMFLAG_DISABLED	(1 << 9)	// this item is disabled by default
+#define ITEMFLAG_PICKABLE	(1 << 10)	// players can choose to toggle this item
+#define ITEM_COOKIE_VER 1
 
 // game code defs
 #define EF_NODRAW 0x20
@@ -175,7 +177,11 @@ enum struct Item {
 }
 
 enum struct Player {
-	//int respawn; // frame to force a respawn after
+	bool items_pick[NUM_ITEMS]; // enabled items the player has chosen
+	int items_life[NUM_ITEMS]; // enabled items for this life (inc cvar)
+	bool change; // are there pending attrib changes?
+	bool picked; // made any changes in the pick menu
+	int respawn; // frame to force a respawn after
 	bool received_help_notice;
 
 	// gameplay vars
@@ -330,7 +336,6 @@ Player players[MAXPLAYERS+1];
 Entity entities[2048];
 int frame;
 Handle hudsync;
-// Menu menu_pick;
 int rocket_create_entity;
 int rocket_create_frame;
 
@@ -504,11 +509,11 @@ public void OnPluginStart() {
 #endif
 	cvar_enable_shortstop_shove.AddChangeHook(OnShortstopShoveCvarChange);
 
-	ItemDefine("airblast", "Airblast_PreJI", CLASSFLAG_PYRO, Feat_Airblast);
+	ItemDefine("airblast", "Airblast_PreJI", CLASSFLAG_PYRO | ITEMFLAG_PICKABLE, Feat_Airblast);
 #if defined MEMORY_PATCHES
 	ItemDefine("flamethrower", "Flamethrower_PreBM", CLASSFLAG_PYRO, Feat_Flamethrower, true);
 #endif
-	ItemDefine("grenade", "Grenade_Pre2014", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Feat_Grenade);
+	ItemDefine("grenade", "Grenade_Pre2014", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Feat_Grenade);
 #if defined MEMORY_PATCHES
 	ItemDefine("miniramp", "Minigun_ramp_PreLW", CLASSFLAG_HEAVY, Feat_Minigun, true);
 	ItemDefine("sniperrifles", "SniperRifle_PreLW", CLASSFLAG_SNIPER, Feat_SniperRifle, true);
@@ -520,9 +525,9 @@ public void OnPluginStart() {
 	ItemDefine("airstrike", "Airstrike_PreTB", CLASSFLAG_SOLDIER, Wep_Airstrike);
 	ItemDefine("ambassador", "Ambassador_PreJI", CLASSFLAG_SPY, Wep_Ambassador);
 	ItemDefine("amputator", "Amputator_PreTB", CLASSFLAG_MEDIC, Wep_Amputator);
-	ItemDefine("atomizer", "Atomizer_PreJI", CLASSFLAG_SCOUT, Wep_Atomizer);
+	ItemDefine("atomizer", "Atomizer_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Atomizer);
 	ItemVariant(Wep_Atomizer, "Atomizer_PreBM");
-	ItemDefine("axtinguish", "Axtinguisher_PreLW", CLASSFLAG_PYRO, Wep_Axtinguisher);
+	ItemDefine("axtinguish", "Axtinguisher_PreLW", CLASSFLAG_PYRO | ITEMFLAG_PICKABLE, Wep_Axtinguisher);
 	ItemVariant(Wep_Axtinguisher, "Axtinguisher_PreTB");
 	ItemVariant(Wep_Axtinguisher, "Axtinguisher_PreBM");
 	ItemDefine("backburner", "Backburner_PreHat", CLASSFLAG_PYRO, Wep_Backburner);
@@ -531,23 +536,23 @@ public void OnPluginStart() {
 	ItemDefine("basejump", "BaseJumper_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_BaseJumper);
 	ItemDefine("babyface", "BabyFace_PreGM", CLASSFLAG_SCOUT, Wep_BabyFace);
 	ItemVariant(Wep_BabyFace, "BabyFace_Release");
-	ItemDefine("beggars", "Beggars_Pre2013", CLASSFLAG_SOLDIER, Wep_Beggars);
+	ItemDefine("beggars", "Beggars_Pre2013", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_Beggars);
 	ItemVariant(Wep_Beggars, "Beggars_PreTB");
-	ItemDefine("blackbox", "BlackBox_PreGM", CLASSFLAG_SOLDIER, Wep_BlackBox);
+	ItemDefine("blackbox", "BlackBox_PreGM", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_BlackBox);
 	ItemDefine("bonk", "Bonk_PreJI", CLASSFLAG_SCOUT, Wep_Bonk);
 	ItemDefine("booties", "Booties_PreMYM", CLASSFLAG_DEMOMAN, Wep_Booties);
 	ItemDefine("brassbeast", "BrassBeast_PreMYM", CLASSFLAG_HEAVY, Wep_BrassBeast);
-	ItemDefine("bushwacka", "Bushwacka_PreLW", CLASSFLAG_SNIPER, Wep_Bushwacka);
+	ItemDefine("bushwacka", "Bushwacka_PreLW", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_Bushwacka);
 	ItemVariant(Wep_Bushwacka, "Bushwacka_PreGM");
 	ItemDefine("buffalosteak", "BuffaloSteak_PreMYM", CLASSFLAG_HEAVY, Wep_BuffaloSteak);
 	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Release");
 	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Pre2013");
-	ItemDefine("targe", "Targe_PreTB", CLASSFLAG_DEMOMAN, Wep_CharginTarge);
-	ItemDefine("claidheamh", "Claidheamh_PreTB", CLASSFLAG_DEMOMAN, Wep_Claidheamh);
-	ItemDefine("carbine", "Carbine_Release", CLASSFLAG_SNIPER, Wep_CleanerCarbine);
+	ItemDefine("targe", "Targe_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_CharginTarge);
+	ItemDefine("claidheamh", "Claidheamh_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Claidheamh);
+	ItemDefine("carbine", "Carbine_Release", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_CleanerCarbine);
 	ItemVariant(Wep_CleanerCarbine, "Carbine_PreTB");
-	ItemDefine("concheror", "Concheror_PreTB", CLASSFLAG_SOLDIER, Wep_Concheror);
-	ItemDefine("cowmangler", "CowMangler_Release", CLASSFLAG_SOLDIER, Wep_CowMangler);
+	ItemDefine("concheror", "Concheror_PreTB", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_Concheror);
+	ItemDefine("cowmangler", "CowMangler_Release", CLASSFLAG_SOLDIER | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Wep_CowMangler);
 	ItemVariant(Wep_CowMangler, "CowMangler_Pre2013");
 #if defined MEMORY_PATCHES
 	ItemDefine("cozycamper", "CozyCamper_PreMYM", CLASSFLAG_SNIPER, Wep_CozyCamper, true);
@@ -561,9 +566,9 @@ public void OnPluginStart() {
 #if defined MEMORY_PATCHES
 	ItemDefine("dalokohsbar", "DalokohsBar_PreMYM", CLASSFLAG_HEAVY, Wep_Dalokohs, true);
 #endif
-	ItemDefine("darwin", "Darwin_Pre2013", CLASSFLAG_SNIPER, Wep_Darwin);
+	ItemDefine("darwin", "Darwin_Pre2013", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_Darwin);
 	ItemVariant(Wep_Darwin, "Darwin_PreJI");
-	ItemDefine("ringer", "Ringer_PreGM", CLASSFLAG_SPY, Wep_DeadRinger);
+	ItemDefine("ringer", "Ringer_PreGM", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_DeadRinger);
 	ItemVariant(Wep_DeadRinger, "Ringer_PreJI");
 	ItemVariant(Wep_DeadRinger, "Ringer_PreTB");
 	ItemVariant(Wep_DeadRinger, "Ringer_PostRelease");
@@ -576,48 +581,48 @@ public void OnPluginStart() {
 #else
 	ItemDefine("dragonfury", "DragonFury_Release_Patchless", CLASSFLAG_PYRO, Wep_DragonFury);
 #endif
-	ItemDefine("enforcer", "Enforcer_PreGM", CLASSFLAG_SPY, Wep_Enforcer);
+	ItemDefine("enforcer", "Enforcer_PreGM", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_Enforcer);
 	ItemVariant(Wep_Enforcer, "Enforcer_Release");
-	ItemDefine("equalizer", "Equalizer_PrePyro", CLASSFLAG_SOLDIER, Wep_Pickaxe);
+	ItemDefine("equalizer", "Equalizer_PrePyro", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_Pickaxe);
 	ItemVariant(Wep_Pickaxe, "Equalizer_PreHat");
 	ItemVariant(Wep_Pickaxe, "Equalizer_Release");
 	ItemDefine("eureka", "Eureka_SpawnRefill", CLASSFLAG_ENGINEER, Wep_EurekaEffect);
 	ItemDefine("eviction", "Eviction_PreJI", CLASSFLAG_HEAVY, Wep_Eviction);
 	ItemVariant(Wep_Eviction, "Eviction_PreMYM");
 	ItemDefine("expert", "Expert_Release", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Set_Expert);
-	ItemDefine("fiststeel", "FistSteel_PreJI", CLASSFLAG_HEAVY, Wep_FistsSteel);
+	ItemDefine("fiststeel", "FistSteel_PreJI", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_FistsSteel);
 	ItemVariant(Wep_FistsSteel, "FistSteel_PreTB");
 	ItemVariant(Wep_FistsSteel, "FistSteel_Release");
-	ItemDefine("guillotine", "Guillotine_PreJI", CLASSFLAG_SCOUT, Wep_Cleaver);
+	ItemDefine("guillotine", "Guillotine_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Cleaver);
 	ItemDefine("gasjockey", "GasJockey_Release", CLASSFLAG_PYRO | ITEMFLAG_DISABLED, Set_GasJockey);
-	ItemDefine("glovesru", "GlovesRU_PreTB", CLASSFLAG_HEAVY, Wep_GRU);
+	ItemDefine("glovesru", "GlovesRU_PreTB", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_GRU);
 	ItemVariant(Wep_GRU, "GlovesRU_PreJI");
 	ItemVariant(Wep_GRU, "GlovesRU_PrePyro");
 	ItemDefine("gunboats", "Gunboats_Release", CLASSFLAG_SOLDIER, Wep_Gunboats);
 #if defined MEMORY_PATCHES
-	ItemDefine("gunslinger", "Gunslinger_PreGM", CLASSFLAG_ENGINEER, Wep_Gunslinger);
+	ItemDefine("gunslinger", "Gunslinger_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_Gunslinger);
 	ItemVariant(Wep_Gunslinger, "Gunslinger_Release");
 #endif
-	ItemDefine("zatoichi", "Zatoichi_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_Zatoichi);
+	ItemDefine("zatoichi", "Zatoichi_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Zatoichi);
 	ItemDefine("hibernate", "Hibernate_Release", CLASSFLAG_HEAVY | ITEMFLAG_DISABLED, Set_Hibernate);
 #if defined MEMORY_PATCHES	
 	ItemDefine("ironbomber", "IronBomber_Pre2022", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Wep_IronBomber, true);
 #endif
 	ItemDefine("jag", "Jag_PreTB", CLASSFLAG_ENGINEER, Wep_Jag);
 	ItemVariant(Wep_Jag, "Jag_PreGM");  
-	ItemDefine("liberty", "Liberty_Release", CLASSFLAG_SOLDIER, Wep_LibertyLauncher);
+	ItemDefine("liberty", "Liberty_Release", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_LibertyLauncher);
 	ItemDefine("lochload", "LochLoad_PreGM", CLASSFLAG_DEMOMAN, Wep_LochLoad);
 	ItemVariant(Wep_LochLoad, "LochLoad_2013");
-	ItemDefine("cannon", "Cannon_PreTB", CLASSFLAG_DEMOMAN, Wep_LooseCannon);
+	ItemDefine("cannon", "Cannon_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_LooseCannon);
 #if defined MEMORY_PATCHES
 	ItemDefine("madmilk", "MadMilk_Release", CLASSFLAG_SCOUT, Wep_MadMilk, true);
 #endif
 	ItemDefine("gardener", "Gardener_PreTB", CLASSFLAG_SOLDIER, Wep_MarketGardener);
 	ItemDefine("natascha", "Natascha_PreMYM", CLASSFLAG_HEAVY, Wep_Natascha);
 	ItemVariant(Wep_Natascha, "Natascha_PreGM");
-	ItemDefine("panic", "Panic_PreJI", CLASSFLAG_SOLDIER | CLASSFLAG_PYRO | CLASSFLAG_HEAVY | CLASSFLAG_ENGINEER, Wep_PanicAttack);
-	ItemDefine("persuader", "Persuader_PreTB", CLASSFLAG_DEMOMAN, Wep_Persian);
-	ItemDefine("phlog", "Phlog_Pyro", CLASSFLAG_PYRO, Wep_Phlogistinator);
+	ItemDefine("panic", "Panic_PreJI", CLASSFLAG_SOLDIER | CLASSFLAG_PYRO | CLASSFLAG_HEAVY | CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_PanicAttack);
+	ItemDefine("persuader", "Persuader_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Persian);
+	ItemDefine("phlog", "Phlog_Pyro", CLASSFLAG_PYRO | ITEMFLAG_PICKABLE, Wep_Phlogistinator);
 	ItemVariant(Wep_Phlogistinator, "Phlog_TB");
 	ItemVariant(Wep_Phlogistinator, "Phlog_Release");
 	ItemVariant(Wep_Phlogistinator, "Phlog_March2012");
@@ -627,17 +632,17 @@ public void OnPluginStart() {
 	ItemDefine("powerjack", "Powerjack_PreGM", CLASSFLAG_PYRO, Wep_Powerjack);
 	ItemVariant(Wep_Powerjack, "Powerjack_Release");
 	ItemVariant(Wep_Powerjack, "Powerjack_Pre2013");	
-	ItemDefine("pocket", "Pocket_Release", CLASSFLAG_SCOUT, Wep_PocketPistol);
+	ItemDefine("pocket", "Pocket_Release", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_PocketPistol);
 	ItemVariant(Wep_PocketPistol, "Pocket_PreBM");
 #if defined MEMORY_PATCHES
 	ItemDefine("quickfix", "Quickfix_PreTB", CLASSFLAG_MEDIC, Wep_QuickFix, true);
 #else
 	ItemDefine("quickfix", "Quickfix_PreMYM", CLASSFLAG_MEDIC, Wep_QuickFix);
 #endif
-	ItemDefine("quickiebomb", "Quickiebomb_PreMYM", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Wep_Quickiebomb);
-	ItemDefine("razorback", "Razorback_PreJI", CLASSFLAG_SNIPER, Wep_Razorback);
-	ItemDefine("redtape", "RedTapeRecorder_Release", CLASSFLAG_SPY | ITEMFLAG_DISABLED, Wep_RedTapeRecorder);
-	ItemDefine("rescueranger", "RescueRanger_PreGM", CLASSFLAG_ENGINEER, Wep_RescueRanger);
+	ItemDefine("quickiebomb", "Quickiebomb_PreMYM", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Quickiebomb);
+	ItemDefine("razorback", "Razorback_PreJI", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_Razorback);
+	ItemDefine("redtape", "RedTapeRecorder_Release", CLASSFLAG_SPY | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Wep_RedTapeRecorder);
+	ItemDefine("rescueranger", "RescueRanger_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_RescueRanger);
 	ItemVariant(Wep_RescueRanger, "RescueRanger_PreJI");
 	ItemVariant(Wep_RescueRanger, "RescueRanger_Release");
 	ItemDefine("reserve", "Reserve_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_PYRO, Wep_ReserveShooter);
@@ -651,39 +656,39 @@ public void OnPluginStart() {
 	ItemVariant(Wep_RocketJumper, "RocketJmp_Oct2010");
 	ItemDefine("saharan", "Saharan_Release", CLASSFLAG_SPY | ITEMFLAG_DISABLED, Set_Saharan);
 	ItemVariant(Set_Saharan, "Saharan_ExtraCloak");
-	ItemDefine("sandman", "Sandman_PreJI", CLASSFLAG_SCOUT, Wep_Sandman);
+	ItemDefine("sandman", "Sandman_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Sandman);
 	ItemVariant(Wep_Sandman, "Sandman_PreWAR");
-	ItemDefine("scottish", "Scottish_Release", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Wep_Scottish);
-	ItemDefine("circuit", "Circuit_PreMYM", CLASSFLAG_ENGINEER, Wep_ShortCircuit);
+	ItemDefine("scottish", "Scottish_Release", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Wep_Scottish);
+	ItemDefine("circuit", "Circuit_PreMYM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_ShortCircuit);
 	ItemVariant(Wep_ShortCircuit, "Circuit_PreGM");
 	ItemVariant(Wep_ShortCircuit, "Circuit_Dec2013");
-	ItemDefine("shortstop", "Shortstop_PreMnvy", CLASSFLAG_SCOUT, Wep_Shortstop);
+	ItemDefine("shortstop", "Shortstop_PreMnvy", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Shortstop);
 	ItemVariant(Wep_Shortstop, "Shortstop_PreGM");
 	ItemVariant(Wep_Shortstop, "Shortstop_Release");
-	ItemDefine("sodapop", "Sodapop_Pre2013", CLASSFLAG_SCOUT, Wep_SodaPopper);
+	ItemDefine("sodapop", "Sodapop_Pre2013", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_SodaPopper);
 	ItemVariant(Wep_SodaPopper, "Sodapop_PreMYM");
 	ItemDefine("solemn", "Solemn_PreGM", CLASSFLAG_MEDIC, Wep_Solemn);
 	ItemDefine("spdelivery", "SpDelivery_Release", CLASSFLAG_SCOUT | ITEMFLAG_DISABLED, Set_SpDelivery);
-	ItemDefine("splendid", "Splendid_PreTB", CLASSFLAG_DEMOMAN, Wep_SplendidScreen);
+	ItemDefine("splendid", "Splendid_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_SplendidScreen);
 	ItemVariant(Wep_SplendidScreen, "Splendid_Release");
-	ItemDefine("spycicle", "SpyCicle_PreGM", CLASSFLAG_SPY, Wep_Spycicle);
+	ItemDefine("spycicle", "SpyCicle_PreGM", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_Spycicle);
 	ItemDefine("stkjumper", "StkJumper_Pre2013", CLASSFLAG_DEMOMAN, Wep_StickyJumper);
 	ItemVariant(Wep_StickyJumper, "StkJumper_Pre2013_Intel");
 	ItemVariant(Wep_StickyJumper, "StkJumper_Pre2011");
 	ItemVariant(Wep_StickyJumper, "StkJumper_ReleaseDay2");
-	ItemDefine("sleeper", "Sleeper_PreBM", CLASSFLAG_SNIPER, Wep_SydneySleeper);
+	ItemDefine("sleeper", "Sleeper_PreBM", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_SydneySleeper);
 	ItemVariant(Wep_SydneySleeper, "Sleeper_PreGM");
 	ItemVariant(Wep_SydneySleeper, "Sleeper_Release");	
-	ItemDefine("turner", "Turner_PreTB", CLASSFLAG_DEMOMAN, Wep_TideTurner);
-	ItemDefine("tomislav", "Tomislav_PrePyro", CLASSFLAG_HEAVY, Wep_Tomislav);
+	ItemDefine("turner", "Turner_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_TideTurner);
+	ItemDefine("tomislav", "Tomislav_PrePyro", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_Tomislav);
 	ItemVariant(Wep_Tomislav, "Tomislav_Release");
 	ItemDefine("tribalshiv", "TribalShiv_Release", CLASSFLAG_SNIPER, Wep_TribalmansShiv);
 	ItemDefine("caber", "Caber_PreGM", CLASSFLAG_DEMOMAN, Wep_Caber);
-	ItemDefine("vitasaw", "VitaSaw_PreJI", CLASSFLAG_MEDIC, Wep_VitaSaw);
-	ItemDefine("warrior", "Warrior_PreTB", CLASSFLAG_HEAVY, Wep_WarriorSpirit);
+	ItemDefine("vitasaw", "VitaSaw_PreJI", CLASSFLAG_MEDIC | ITEMFLAG_PICKABLE, Wep_VitaSaw);
+	ItemDefine("warrior", "Warrior_PreTB", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_WarriorSpirit);
 	ItemDefine("wrangler", "Wrangler_PreGM", CLASSFLAG_ENGINEER, Wep_Wrangler);
 	ItemVariant(Wep_Wrangler, "Wrangler_PreLW");
-	ItemDefine("eternal", "Eternal_PreJI", CLASSFLAG_SPY, Wep_EternalReward);
+	ItemDefine("eternal", "Eternal_PreJI", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_EternalReward);
 
 	ItemFinalize();
 
@@ -722,6 +727,8 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_revertsinfo", Command_Info, (PLUGIN_NAME ... " - Show reverts info in console"), 0);
 	RegConsoleCmd("sm_classrevert", Command_ClassInfo, (PLUGIN_NAME ... " - Show reverts for the current class"), 0);
 	RegConsoleCmd("sm_classreverts", Command_ClassInfo, (PLUGIN_NAME ... " - Show reverts for the current class"), 0);
+	RegConsoleCmd("sm_revertpick", Command_Pick, (PLUGIN_NAME ... " - Pick which reverts to enable"), 0);
+	RegConsoleCmd("sm_revertspick", Command_Pick, (PLUGIN_NAME ... " - Pick which reverts to enable"), 0);
 	RegConsoleCmd("sm_toggleinfo", Command_ToggleInfo, (PLUGIN_NAME ... " - Toggle the revert info dump in chat when changing loadouts"), 0);
 
 	HookEvent("player_spawn", OnGameEvent, EventHookMode_Post);
@@ -1151,16 +1158,16 @@ public void OnGameFrame() {
 				{
 					// respawn to apply attribs
 
-					// if (players[idx].respawn > 0) {
-					// 	if ((players[idx].respawn + 2) == GetGameTickCount()) {
-					// 		TF2_RespawnPlayer(idx);
-					// 		players[idx].respawn = 0;
+					if (players[idx].respawn > 0) {
+						if ((players[idx].respawn + 2) == GetGameTickCount()) {
+							TF2_RespawnPlayer(idx);
+							players[idx].respawn = 0;
 
-					// 		PrintToChat(idx, "[SM] Revert changes have been applied");
-					// 	}
+							PrintToChat(idx, "[SM] %t", "REVERT_APPLY_CHANGES");
+						}
 
-					// 	continue;
-					// }
+						continue;
+					}
 				}
 
 				{
@@ -1193,7 +1200,7 @@ public void OnGameFrame() {
 								StrEqual(class, "tf_weapon_bat") &&
 								GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 450
 							) {
-								switch (GetItemVariant(Wep_Atomizer)) {
+								switch (GetItemVariant(Wep_Atomizer, idx)) {
 									case -1: {
 										if (weapon == GetEntPropEnt(idx, Prop_Send, "m_hActiveWeapon")) {
 											airdash_limit_old = 2;
@@ -1213,7 +1220,7 @@ public void OnGameFrame() {
 						if (TF2_IsPlayerInCondition(idx, TFCond_CritHype)) {
 							airdash_limit_old = 5;
 
-							if (GetItemVariant(Wep_SodaPopper) != 0) {
+							if (GetItemVariant(Wep_SodaPopper, idx) != 0) {
 								airdash_limit_new = 5;
 							}
 						}
@@ -1232,11 +1239,11 @@ public void OnGameFrame() {
 
 							if (
 								airdash_limit_new == 2 &&
-								ItemIsEnabled(Wep_Atomizer)
+								ItemIsEnabled(Wep_Atomizer, idx)
 							) {
 								if (
-									GetItemVariant(Wep_Atomizer) == 0 ||
-									(GetItemVariant(Wep_Atomizer) == 1 && players[idx].scout_airdash_count == 2)
+									GetItemVariant(Wep_Atomizer, idx) == 0 ||
+									(GetItemVariant(Wep_Atomizer, idx) == 1 && players[idx].scout_airdash_count == 2)
 								) {
 									// emit purple smoke (still shows white smoke too but good enough for now)
 									GetEntPropVector(idx, Prop_Send, "m_vecOrigin", pos1);
@@ -1245,7 +1252,7 @@ public void OnGameFrame() {
 
 								if (players[idx].scout_airdash_count == 2) {
 									// atomizer global jump
-									if (GetItemVariant(Wep_Atomizer) == 0) {
+									if (GetItemVariant(Wep_Atomizer, idx) == 0) {
 										SDKHooks_TakeDamage(idx, idx, idx, 10.0, (DMG_BULLET|DMG_PREVENT_PHYSICS_FORCE), -1, NULL_VECTOR, NULL_VECTOR);
 									}
 
@@ -1295,7 +1302,7 @@ public void OnGameFrame() {
 					{
 						// guillotine recharge
 
-						if (ItemIsEnabled(Wep_Cleaver)) {
+						if (ItemIsEnabled(Wep_Cleaver, idx)) {
 							weapon = GetPlayerWeaponSlot(idx, TFWeaponSlot_Secondary);
 
 							if (weapon > 0) {
@@ -1323,9 +1330,9 @@ public void OnGameFrame() {
 					{
 						// sodapopper stuff
 
-						if (ItemIsEnabled(Wep_SodaPopper)) {
+						if (ItemIsEnabled(Wep_SodaPopper, idx)) {
 							if (
-								GetItemVariant(Wep_SodaPopper) == 0 &&
+								GetItemVariant(Wep_SodaPopper, idx) == 0 &&
 								players[idx].is_under_hype
 							) {
 								// allow mini-crit buff to last indefinitely
@@ -1343,7 +1350,7 @@ public void OnGameFrame() {
 									TF2_IsPlayerInCondition(idx, TFCond_CritHype) == false
 								) {
 									if (
-										GetItemVariant(Wep_SodaPopper) == 0 &&
+										GetItemVariant(Wep_SodaPopper, idx) == 0 &&
 										GetEntPropFloat(idx, Prop_Send, "m_flHypeMeter") >= 100.0
 									) {
 										// Fall back to hype condition if the player has a drink item
@@ -1373,7 +1380,7 @@ public void OnGameFrame() {
 
 								// hype meter drain on minicrit condition
 								if (
-									GetItemVariant(Wep_SodaPopper) == 0 &&
+									GetItemVariant(Wep_SodaPopper, idx) == 0 &&
 									players[idx].is_under_hype
 								) {
 									hype = GetEntPropFloat(idx, Prop_Send, "m_flHypeMeter");
@@ -1417,7 +1424,7 @@ public void OnGameFrame() {
 								ammo = GetEntProp(idx, Prop_Send, "m_iAmmo", 4, 1);
 
 								if (
-									GetItemVariant(Wep_Beggars) == 0 &&
+									GetItemVariant(Wep_Beggars, idx) == 0 &&
 									players[idx].beggars_ammo >= 3 &&
 									clip == (players[idx].beggars_ammo - 1) &&
 									rocket_create_entity == -1 &&
@@ -1444,7 +1451,7 @@ public void OnGameFrame() {
 						if (weapon > 0) {
 
 							if (
-								ItemIsEnabled(Wep_Powerjack) &&
+								ItemIsEnabled(Wep_Powerjack, idx) &&
 								GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 214 &&
 								players[idx].powerjack_kill_tick + 1 == GetGameTickCount()
 							) {
@@ -1476,7 +1483,7 @@ public void OnGameFrame() {
 						if (weapon > 0) {
 
 							if (
-								ItemIsEnabled(Wep_Phlogistinator) &&
+								ItemIsEnabled(Wep_Phlogistinator, idx) &&
 								GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 594
 							) {
 								hype = GetEntPropFloat(idx, Prop_Send, "m_flRageMeter");
@@ -1554,7 +1561,7 @@ public void OnGameFrame() {
 					{
 						// release cleaner's carbine use crikey meter to indicate remaining buff duration
 						// this is purely a custom visual thing
-						if (GetItemVariant(Wep_CleanerCarbine) == 0) {
+						if (GetItemVariant(Wep_CleanerCarbine, idx) == 0) {
 							weapon = GetPlayerWeaponSlot(idx, TFWeaponSlot_Secondary);
 
 							if (weapon > 0) {
@@ -1578,7 +1585,7 @@ public void OnGameFrame() {
 						// razorback no recharge
 
 						if (
-							ItemIsEnabled(Wep_Razorback) &&
+							ItemIsEnabled(Wep_Razorback, idx) &&
 							player_weapons[idx][Wep_Razorback]
 						) {
 							for (int i = 0; i < TF2Util_GetPlayerWearableCount(idx); i++)
@@ -1612,7 +1619,7 @@ public void OnGameFrame() {
 							) {
 								players[idx].spy_is_feigning = true;
 								players[idx].damage_taken_during_feign = 0.0;
-								switch (GetItemVariant(Wep_DeadRinger)) {
+								switch (GetItemVariant(Wep_DeadRinger, idx)) {
 									case 0, 3: {
 										players[idx].spy_under_feign_buffs = true;
 									}
@@ -1626,7 +1633,7 @@ public void OnGameFrame() {
 								players[idx].spy_is_feigning = false;
 								players[idx].spy_under_feign_buffs = false;
 
-								switch (GetItemVariant(Wep_DeadRinger)) {
+								switch (GetItemVariant(Wep_DeadRinger, idx)) {
 									case 0: { // pre-GM
 										// when uncloaking, cloak is drained to 40%
 
@@ -1647,7 +1654,7 @@ public void OnGameFrame() {
 
 						cloak = GetEntPropFloat(idx, Prop_Send, "m_flCloakMeter");
 
-						if (GetItemVariant(Wep_DeadRinger) == 0) {
+						if (GetItemVariant(Wep_DeadRinger, idx) == 0) {
 							weapon = GetPlayerWeaponSlot(idx, TFWeaponSlot_Building);
 
 							if (weapon > 0) {
@@ -1691,7 +1698,7 @@ public void OnGameFrame() {
 					{
 						// spycicle recharge
 
-						if (ItemIsEnabled(Wep_Spycicle)) {
+						if (ItemIsEnabled(Wep_Spycicle, idx)) {
 							weapon = GetPlayerWeaponSlot(idx, TFWeaponSlot_Melee);
 
 							if (weapon > 0) {
@@ -1732,7 +1739,7 @@ public void OnGameFrame() {
 					{
 						// zatoichi honorbound
 
-						if (ItemIsEnabled(Wep_Zatoichi)) {
+						if (ItemIsEnabled(Wep_Zatoichi, idx)) {
 							weapon = GetEntPropEnt(idx, Prop_Send, "m_hActiveWeapon");
 
 							if (weapon > 0) {
@@ -1834,16 +1841,21 @@ public void OnGameFrame() {
 }
 
 public void OnClientConnected(int client) {
+	for (int i = 0; i < NUM_ITEMS; i++) {
+		players[client].items_pick[i] = true;
+		prev_player_weapons[client][i] = false;
+	}
+
+	// apply item picks
+	ItemPlayerApply(client);
+	players[client].change = IsClientInGame(client);
+
 	// reset these per player
-	//players[client].respawn = 0;
+	players[client].respawn = 0;
 	players[client].resupply_time = 0.0;
 	players[client].medic_medigun_defidx = 0;
 	players[client].medic_medigun_charge = 0.0;
 	players[client].received_help_notice = false;
-
-	for (int i = 0; i < NUM_ITEMS; i++) {
-		prev_player_weapons[client][i] = false;
-	}
 }
 
 public void OnClientPutInServer(int client) {
@@ -1967,7 +1979,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 		// bonk cancel stun
 
 		if (
-			ItemIsEnabled(Wep_Bonk) &&
+			ItemIsEnabled(Wep_Bonk, client) &&
 			condition == TFCond_Dazed &&
 			abs(GetGameTickCount() - players[client].bonk_cond_frame) <= 2 &&
 			players[client].bonk_cond_frame > 0 //just in case
@@ -1979,7 +1991,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 		// if player somehow activated hype condition, remove it, unless they have a drink item
 
 		if (
-			GetItemVariant(Wep_SodaPopper) == 0 &&
+			GetItemVariant(Wep_SodaPopper, client) == 0 &&
 			condition == TFCond_CritHype &&
 			(player_weapons[client][Wep_Bonk] || player_weapons[client][Wep_CritCola]) == false
 		) {
@@ -1990,8 +2002,8 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 		// "old-style" dead ringer stuff
 
 		if (
-			(GetItemVariant(Wep_DeadRinger) == 0 ||
-			GetItemVariant(Wep_DeadRinger) == 3) &&
+			(GetItemVariant(Wep_DeadRinger, client) == 0 ||
+			GetItemVariant(Wep_DeadRinger, client) == 3) &&
 			TF2_GetPlayerClass(client) == TFClass_Spy
 		) {
 			if (
@@ -2033,7 +2045,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 		// spycicle fire immune
 
 		if (
-			ItemIsEnabled(Wep_Spycicle) &&
+			ItemIsEnabled(Wep_Spycicle, client) &&
 			TF2_GetPlayerClass(client) == TFClass_Spy &&
 			condition == TFCond_FireImmune &&
 			TF2_IsPlayerInCondition(client, TFCond_AfterburnImmune)
@@ -2048,8 +2060,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 		// buffalo steak sandvich minicrit on damage taken
 		// steak sandvich buff effect is composed of TFCond_CritCola and TFCond_RestrictToMelee according to the released source code
 		if (
-			ItemIsEnabled(Wep_BuffaloSteak) &&
-			(GetItemVariant(Wep_BuffaloSteak) == 1 || GetItemVariant(Wep_BuffaloSteak) == 2) &&
+			(GetItemVariant(Wep_BuffaloSteak, client) == 1 || GetItemVariant(Wep_BuffaloSteak, client) == 2) &&
 			TF2_GetPlayerClass(client) == TFClass_Heavy &&
 			condition == TFCond_RestrictToMelee &&
 			TF2_IsPlayerInCondition(client, TFCond_CritCola)
@@ -2060,7 +2071,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 	{
 		// crit-a-cola damage taken minicrits
 		if (
-			(GetItemVariant(Wep_CritCola) == 3 || GetItemVariant(Wep_CritCola) == 4) &&
+			(GetItemVariant(Wep_CritCola, client) == 3 || GetItemVariant(Wep_CritCola, client) == 4) &&
 			TF2_GetPlayerClass(client) == TFClass_Scout &&
 			condition == TFCond_CritCola &&
 			player_weapons[client][Wep_CritCola] == true
@@ -2071,7 +2082,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 	{
 		// Phlogistinator reverts (uber and knockback immunity removal handled in OnAddCond)
 		if (
-			ItemIsEnabled(Wep_Phlogistinator) &&
+			ItemIsEnabled(Wep_Phlogistinator, client) &&
 			TF2_GetPlayerClass(client) == TFClass_Pyro &&
 			condition == TFCond_Taunting &&
 			TF2_IsPlayerInCondition(client, TFCond_CritMmmph)
@@ -2083,7 +2094,7 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 				SetEntProp(client, Prop_Send, "m_iHealth", health_max);
 			}
 
-			switch (GetItemVariant(Wep_Phlogistinator)) {
+			switch (GetItemVariant(Wep_Phlogistinator, client)) {
 				case 0, 2, 3: { // Pyromania, Release and March 15, 2012 Phlog
 					TF2_AddCondition(client, TFCond_InHealRadius, 3.0, 0); // re-add healing circle visual effect
 					TF2_AddCondition(client, TFCond_DefenseBuffMmmph, 3.0, 0);
@@ -2108,7 +2119,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	{
 		// if player is under minicrits but the cond was removed (e.g. via resupply), re-add it
 		if (
-			GetItemVariant(Wep_SodaPopper) == 0 &&
+			GetItemVariant(Wep_SodaPopper, client) == 0 &&
 			condition == TFCond_CritCola &&
 			players[client].is_under_hype == true &&
 			TF2_GetPlayerClass(client) == TFClass_Scout
@@ -2120,8 +2131,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	{
 		// buffalo steak sandvich marked-for-death effect removal
 		if (
-			ItemIsEnabled(Wep_BuffaloSteak) &&
-			(GetItemVariant(Wep_BuffaloSteak) == 1 || GetItemVariant(Wep_BuffaloSteak) == 2) &&
+			(GetItemVariant(Wep_BuffaloSteak, client) == 1 || GetItemVariant(Wep_BuffaloSteak, client) == 2) &&
 			TF2_GetPlayerClass(client) == TFClass_Heavy &&
 			(condition == TFCond_CritCola || condition == TFCond_RestrictToMelee) &&
 			TF2_IsPlayerInCondition(client, TFCond_MarkedForDeathSilent)
@@ -2132,7 +2142,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	{
 		// crit-a-cola mark-for-death removal for pre-July2013 and release variants
 		if (
-			(GetItemVariant(Wep_CritCola) == 3 || GetItemVariant(Wep_CritCola) == 4) &&
+			(GetItemVariant(Wep_CritCola, client) == 3 || GetItemVariant(Wep_CritCola, client) == 4) &&
 			condition == TFCond_CritCola &&
 			TF2_GetPlayerClass(client) == TFClass_Scout &&
 			TF2_IsPlayerInCondition(client, TFCond_MarkedForDeathSilent)
@@ -2142,7 +2152,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	}
 	{
 		if (
-			ItemIsEnabled(Wep_EurekaEffect) &&
+			ItemIsEnabled(Wep_EurekaEffect, client) &&
 			TF2_GetPlayerClass(client) == TFClass_Engineer &&
 			condition == TFCond_Taunting &&
 			players[client].is_eureka_teleporting == true
@@ -2190,8 +2200,8 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 	{
 		// "old-style" dead ringer stuff
 		if (
-			(GetItemVariant(Wep_DeadRinger) == 0 ||
-			GetItemVariant(Wep_DeadRinger) == 3) &&
+			(GetItemVariant(Wep_DeadRinger, client) == 0 ||
+			GetItemVariant(Wep_DeadRinger, client) == 3) &&
 			TF2_GetPlayerClass(client) == TFClass_Spy
 		) {
 			// prevent speed boost being applied on feign death
@@ -2222,7 +2232,7 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 		// crit-a-cola release variant duration modification
 		// crit-a-cola normally applies 9 seconds, then relies on the energy drink meter to have it be 8 seconds
 		if (
-			GetItemVariant(Wep_CritCola) == 4 &&
+			GetItemVariant(Wep_CritCola, client) == 4 &&
 			condition == TFCond_CritCola &&
 			time == 9.0 &&
 			TF2_GetPlayerClass(client) == TFClass_Scout
@@ -2235,7 +2245,8 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 		// prevent Phlog uber and knockback immunity for Release, Pyromania, and March 2012 variants
 		// also prevents removal of debuffs when taunting (e.g. jarate gets removed because of the uber effect)
 		if (
-			ItemIsEnabled(Wep_Phlogistinator) && GetItemVariant(Wep_Phlogistinator) != 1 &&
+			ItemIsEnabled(Wep_Phlogistinator, client) &&
+			GetItemVariant(Wep_Phlogistinator, client) != 1 &&
 			TF2_GetPlayerClass(client) == TFClass_Pyro
 		) {
 			// Prevent Uber effect (should also prevent debuff removal)
@@ -2255,9 +2266,9 @@ public Action TF2_OnRemoveCond(int client, TFCond &condition, float &timeleft, i
 	{
 		// prevent debuff removal for shields
 		if (
-			((ItemIsEnabled(Wep_CharginTarge) && player_weapons[client][Wep_CharginTarge]) ||
-			 (ItemIsEnabled(Wep_SplendidScreen) && player_weapons[client][Wep_SplendidScreen]) ||
-			 (ItemIsEnabled(Wep_TideTurner) && player_weapons[client][Wep_TideTurner])) &&
+			((ItemIsEnabled(Wep_CharginTarge, client) && player_weapons[client][Wep_CharginTarge]) ||
+			 (ItemIsEnabled(Wep_SplendidScreen, client) && player_weapons[client][Wep_SplendidScreen]) ||
+			 (ItemIsEnabled(Wep_TideTurner, client) && player_weapons[client][Wep_TideTurner])) &&
 			players[client].charge_tick == GetGameTickCount()
 		) {
 			for (int i = 0; i < sizeof(debuffs); ++i)
@@ -2270,7 +2281,7 @@ public Action TF2_OnRemoveCond(int client, TFCond &condition, float &timeleft, i
 	{
 		// pre-inferno crit-a-cola mark-for-death on expire
 		if (
-			GetItemVariant(Wep_CritCola) == 1 &&
+			GetItemVariant(Wep_CritCola, client) == 1 &&
 			TF2_GetPlayerClass(client) == TFClass_Scout &&
 			condition == TFCond_CritCola &&
 			GetEntPropFloat(client, Prop_Send, "m_flEnergyDrinkMeter") <= 0.0
@@ -2286,12 +2297,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 	bool sword_reverted = false;
 
 	switch (index) {
-		case 61, 1006: { if (ItemIsEnabled(Wep_Ambassador)) {
+		case 61, 1006: { if (ItemIsEnabled(Wep_Ambassador, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 868, 0.0); // crit dmg falloff
 		}}
-		case 450: { if (ItemIsEnabled(Wep_Atomizer)) {
-			switch (GetItemVariant(Wep_Atomizer)) {
+		case 450: { if (ItemIsEnabled(Wep_Atomizer, client)) {
+			switch (GetItemVariant(Wep_Atomizer, client)) {
 				case 1: { // Pre-Blue Moon
 					TF2Items_SetNumAttributes(itemNew, 1);
 					TF2Items_SetAttribute(itemNew, 0, 250, 0.0); // air dash count
@@ -2305,8 +2316,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 38, 457, 1000: { if (ItemIsEnabled(Wep_Axtinguisher)) {
-			switch (GetItemVariant(Wep_Axtinguisher)) {
+		case 38, 457, 1000: { if (ItemIsEnabled(Wep_Axtinguisher, client)) {
+			switch (GetItemVariant(Wep_Axtinguisher, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 5);
 					TF2Items_SetAttribute(itemNew, 0, 1, 1.00); // damage penalty
@@ -2334,8 +2345,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 			
 		}}
-		case 772: { if (ItemIsEnabled(Wep_BabyFace)) {
-			switch (GetItemVariant(Wep_BabyFace)) {
+		case 772: { if (ItemIsEnabled(Wep_BabyFace, client)) {
+			switch (GetItemVariant(Wep_BabyFace, client)) {
 				case 1: { //release
 					TF2Items_SetNumAttributes(itemNew, 6);
 					TF2Items_SetAttribute(itemNew, 0, 1, 0.70); // damage penalty
@@ -2352,8 +2363,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 40, 1146: { if (ItemIsEnabled(Wep_Backburner)) {
-			switch (GetItemVariant(Wep_Backburner)) {
+		case 40, 1146: { if (ItemIsEnabled(Wep_Backburner, client)) {
+			switch (GetItemVariant(Wep_Backburner, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 1);
 					TF2Items_SetAttribute(itemNew, 0, 2, 1.1); // +10% damage bonus; mult_dmg
@@ -2370,8 +2381,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 237: { if (ItemIsEnabled(Wep_RocketJumper)) {
-			switch (GetItemVariant(Wep_RocketJumper)) {				
+		case 237: { if (ItemIsEnabled(Wep_RocketJumper, client)) {
+			switch (GetItemVariant(Wep_RocketJumper, client)) {
 				case 1: { // RocketJmp_Release
 					TF2Items_SetNumAttributes(itemNew, 2);
 					TF2Items_SetAttribute(itemNew, 0, 15, 1.0); // crit mod disabled
@@ -2395,30 +2406,30 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}	
 			}
 		}}
-		case 730: { if (ItemIsEnabled(Wep_Beggars)) {
+		case 730: { if (ItemIsEnabled(Wep_Beggars, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 100, 1.0); // blast radius decreased
 		}}
-		case 228, 1085: { if (ItemIsEnabled(Wep_BlackBox)) {
+		case 228, 1085: { if (ItemIsEnabled(Wep_BlackBox, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 741, 0.0); // falloff-based heal
 			// heal per hit handled elsewhere
 		}}
-		case 405, 608: { if (ItemIsEnabled(Wep_Booties)) {
+		case 405, 608: { if (ItemIsEnabled(Wep_Booties, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 107, 1.10); // move speed bonus
 			TF2Items_SetAttribute(itemNew, 1, 788, 1.00); // move speed bonus shield required
 		}}
-		case 311: { if (ItemIsEnabled(Wep_BuffaloSteak)) {
+		case 311: { if (ItemIsEnabled(Wep_BuffaloSteak, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			// 0% damage vulnerability while under the effect on release
 			// +10% damage vulnerability while under the effect for current
 			// energy_buff_dmg_taken_multiplier
-			TF2Items_SetAttribute(itemNew, 0, 798, GetItemVariant(Wep_BuffaloSteak) > 0 ? 1.00 : 1.10);
+			TF2Items_SetAttribute(itemNew, 0, 798, GetItemVariant(Wep_BuffaloSteak, client) > 0 ? 1.00 : 1.10);
 			// mini-crits on damage taken handled elsewhere in TF2_OnConditionAdded and TF2_OnConditionRemoved
 		}}
-		case 232: { if (ItemIsEnabled(Wep_Bushwacka)) {
-			switch (GetItemVariant(Wep_Bushwacka)) {
+		case 232: { if (ItemIsEnabled(Wep_Bushwacka, client)) {
+			switch (GetItemVariant(Wep_Bushwacka, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 3);
 					TF2Items_SetAttribute(itemNew, 0, 61, 1.20); // 20% fire damage vulnerability on wearer
@@ -2434,17 +2445,17 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 307: { if (ItemIsEnabled(Wep_Caber)) {
+		case 307: { if (ItemIsEnabled(Wep_Caber, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 5, 1.00); // fire rate penalty
 			TF2Items_SetAttribute(itemNew, 1, 773, 1.00); // single wep deploy time increased
 		}}
-		case 996: { if (ItemIsEnabled(Wep_LooseCannon)) {
+		case 996: { if (ItemIsEnabled(Wep_LooseCannon, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 103, 1.50); // projectile speed increased
 		}}
-		case 751: { if (ItemIsEnabled(Wep_CleanerCarbine)) {
-			switch (GetItemVariant(Wep_CleanerCarbine)) {
+		case 751: { if (ItemIsEnabled(Wep_CleanerCarbine, client)) {
+			switch (GetItemVariant(Wep_CleanerCarbine, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 4);
 					TF2Items_SetAttribute(itemNew, 0, 5, 1.35); // 35% slower firing speed
@@ -2461,8 +2472,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 327: { if (ItemIsEnabled(Wep_Claidheamh)) {
-			bool swords = ItemIsEnabled(Feat_Sword);
+		case 327: { if (ItemIsEnabled(Wep_Claidheamh, client)) {
+			bool swords = ItemIsEnabled(Feat_Sword, client);
 			TF2Items_SetNumAttributes(itemNew, swords ? 4 : 3);
 			TF2Items_SetAttribute(itemNew, 0, 125, -15.0); // -15 max health on wearer
 			TF2Items_SetAttribute(itemNew, 1, 128, 0.0); // When weapon is active:
@@ -2473,12 +2484,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 			sword_reverted = true;
 		}}
-		case 354: { if (ItemIsEnabled(Wep_Concheror)) {
+		case 354: { if (ItemIsEnabled(Wep_Concheror, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 57, 2.0); // +2 health regenerated per second on wearer
 		}}
-		case 441: { if (ItemIsEnabled(Wep_CowMangler)) {
-			switch (GetItemVariant(Wep_CowMangler)) {
+		case 441: { if (ItemIsEnabled(Wep_CowMangler, client)) {
+			switch (GetItemVariant(Wep_CowMangler, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 3);
 					TF2Items_SetAttribute(itemNew, 0, 288, 1.0); // no_crit_boost; this attribute does not work properly! you still get crits but without the crit glow
@@ -2496,12 +2507,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				// no crit boost attribute fix handled elsewhere in SDKHookCB_OnTakeDamage
 			}
 		}}
-		case 163: { if (ItemIsEnabled(Wep_CritCola)) {
-			switch (GetItemVariant(Wep_CritCola)) {
+		case 163: { if (ItemIsEnabled(Wep_CritCola, client)) {
+			switch (GetItemVariant(Wep_CritCola, client)) {
 				case 0, 1, 2: {
 					TF2Items_SetNumAttributes(itemNew, 2);
 					// +25% or +10% damage vulnerability while under the effect, depending on variant
-					float vuln = GetItemVariant(Wep_CritCola) == 2 ? 1.25 : 1.10;
+					float vuln = GetItemVariant(Wep_CritCola, client) == 2 ? 1.25 : 1.10;
 					TF2Items_SetAttribute(itemNew, 0, 798, vuln);
 					TF2Items_SetAttribute(itemNew, 1, 814, 0.0); // no mark-for-death on attack
 				}
@@ -2512,8 +2523,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 231: { if (ItemIsEnabled(Wep_Darwin)) {
-			switch (GetItemVariant(Wep_Darwin)) {
+		case 231: { if (ItemIsEnabled(Wep_Darwin, client)) {
+			switch (GetItemVariant(Wep_Darwin, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 5);
 					TF2Items_SetAttribute(itemNew, 0, 26, 25.0); // +25 max health on wearer
@@ -2530,7 +2541,7 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 215: { if (ItemIsEnabled(Wep_Degreaser)) {
+		case 215: { if (ItemIsEnabled(Wep_Degreaser, client)) {
 			TF2Items_SetNumAttributes(itemNew, 6);
 			TF2Items_SetAttribute(itemNew, 0, 1, 0.90); // damage penalty
 			TF2Items_SetAttribute(itemNew, 1, 72, 0.75); // weapon burn dmg reduced
@@ -2539,8 +2550,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			TF2Items_SetAttribute(itemNew, 4, 199, 1.00); // switch from wep deploy time decreased
 			TF2Items_SetAttribute(itemNew, 5, 547, 1.00); // single wep deploy time decreased
 		}}
-		case 460: { if (ItemIsEnabled(Wep_Enforcer)) {
-			switch (GetItemVariant(Wep_Enforcer)) {
+		case 460: { if (ItemIsEnabled(Wep_Enforcer, client)) {
+			switch (GetItemVariant(Wep_Enforcer, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 6);
 					TF2Items_SetAttribute(itemNew, 0, 2, 1.20); // +20% damage bonus
@@ -2558,7 +2569,7 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 128, 775: { if (ItemIsEnabled(Wep_Pickaxe)) {
+		case 128, 775: { if (ItemIsEnabled(Wep_Pickaxe, client)) {
 			TF2Items_SetNumAttributes(itemNew, index == 775 ? 5 : 4);
 			TF2Items_SetAttribute(itemNew, 0, 115, 0.0); // mod shovel damage boost
 			TF2Items_SetAttribute(itemNew, 1, 235, 2.0); // mod shovel speed boost
@@ -2567,13 +2578,13 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			if (index == 775)
 				TF2Items_SetAttribute(itemNew, 4, 414, 0.0); // self mark for death
 		}}
-		case 225, 574: { if (ItemIsEnabled(Wep_EternalReward)) {
+		case 225, 574: { if (ItemIsEnabled(Wep_EternalReward, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 34, 1.00); // mult cloak meter consume rate
 			TF2Items_SetAttribute(itemNew, 1, 155, 1.00); // cannot disguise
 		}}
-		case 426: { if (ItemIsEnabled(Wep_Eviction)) {
-			switch (GetItemVariant(Wep_Eviction)) {
+		case 426: { if (ItemIsEnabled(Wep_Eviction, client)) {
+			switch (GetItemVariant(Wep_Eviction, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 3);
 					TF2Items_SetAttribute(itemNew, 0, 6, 0.50); // +50% faster firing speed
@@ -2588,8 +2599,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 			// Eviction Notice stacking speedboost on hit with reverted Buffalo Steak Sandvich handled elsewhere
 		}}
-		case 331: { if (ItemIsEnabled(Wep_FistsSteel)) {
-			switch (GetItemVariant(Wep_FistsSteel)) {
+		case 331: { if (ItemIsEnabled(Wep_FistsSteel, client)) {
+			switch (GetItemVariant(Wep_FistsSteel, client)) {
 				case 0: {
 				// Pre-Inferno FoS
 					TF2Items_SetNumAttributes(itemNew, 2);
@@ -2614,12 +2625,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 416: { if (ItemIsEnabled(Wep_MarketGardener)) {
+		case 416: { if (ItemIsEnabled(Wep_MarketGardener, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 5, 1.0); // fire rate penalty
 		}}
-		case 239, 1084, 1100: { if (ItemIsEnabled(Wep_GRU)) {
-			switch (GetItemVariant(Wep_GRU)) {
+		case 239, 1084, 1100: { if (ItemIsEnabled(Wep_GRU, client)) {
+			switch (GetItemVariant(Wep_GRU, client)) {
 				case 0: {
 					// Pre-Tough Break
 					TF2Items_SetNumAttributes(itemNew, 4);
@@ -2645,22 +2656,22 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 133: { if (ItemIsEnabled(Wep_Gunboats)) {
+		case 133: { if (ItemIsEnabled(Wep_Gunboats, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 135, 0.25); // -75% blast damage from rocket jumps
 		}}
 #if defined MEMORY_PATCHES
-		case 142: { if (ItemIsEnabled(Wep_Gunslinger)) {
+		case 142: { if (ItemIsEnabled(Wep_Gunslinger, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 464, 4.0); // Sentry build speed increased by 300%
 		}}
 #endif
-		case 812, 833: { if (ItemIsEnabled(Wep_Cleaver)) {
+		case 812, 833: { if (ItemIsEnabled(Wep_Cleaver, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 437, 65536.0); // crit vs stunned players
 		}}
-		case 329: { if (ItemIsEnabled(Wep_Jag)) {
-			switch (GetItemVariant(Wep_Jag))  {
+		case 329: { if (ItemIsEnabled(Wep_Jag, client)) {
+			switch (GetItemVariant(Wep_Jag, client))  {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 3);
 					TF2Items_SetAttribute(itemNew, 0, 6, 1.00); // +0% faster firing speed
@@ -2673,15 +2684,15 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 414: { if (ItemIsEnabled(Wep_LibertyLauncher)) {
+		case 414: { if (ItemIsEnabled(Wep_LibertyLauncher, client)) {
 			TF2Items_SetNumAttributes(itemNew, 4);
 			TF2Items_SetAttribute(itemNew, 0, 1, 1.00); // damage penalty
 			TF2Items_SetAttribute(itemNew, 1, 3, 0.75); // clip size penalty
 			TF2Items_SetAttribute(itemNew, 2, 4, 1.00); // clip size bonus
 			TF2Items_SetAttribute(itemNew, 3, 135, 1.00); // rocket jump damage reduction
 		}}
-		case 308: { if (ItemIsEnabled(Wep_LochLoad)) {
-			switch (GetItemVariant(Wep_LochLoad)) {
+		case 308: { if (ItemIsEnabled(Wep_LochLoad, client)) {
+			switch (GetItemVariant(Wep_LochLoad, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 6);
 					TF2Items_SetAttribute(itemNew, 0, 2, 1.20); // +20% damage bonus
@@ -2699,12 +2710,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 		}}
 #if defined MEMORY_PATCHES
-		case 222, 1121: { if (ItemIsEnabled(Wep_MadMilk)) {
+		case 222, 1121: { if (ItemIsEnabled(Wep_MadMilk, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 784, 1.0); // extinguish_reduces_cooldown
 		}}
 #endif
-		case 41: { if (GetItemVariant(Wep_Natascha) == 1) {
+		case 41: { if (GetItemVariant(Wep_Natascha, client) == 1) {
 			// imported from NotnHeavy's pre-GM plugin
 			TF2Items_SetNumAttributes(itemNew, 3);
 			TF2Items_SetAttribute(itemNew, 0, 32, 0.00); // On Hit: 0% chance to slow target
@@ -2712,7 +2723,7 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			TF2Items_SetAttribute(itemNew, 2, 738, 1.00); // 0% damage resistance when below 50% health and spun up
 			// no distance falloff for natascha slowdown handled elsewhere
 		}}
-		case 1153: { if (ItemIsEnabled(Wep_PanicAttack)) {
+		case 1153: { if (ItemIsEnabled(Wep_PanicAttack, client)) {
 			TF2Items_SetNumAttributes(itemNew, 11);
 			TF2Items_SetAttribute(itemNew, 0, 1, 1.00); // -0% damage penalty
 			TF2Items_SetAttribute(itemNew, 1, 45, 1.00); // +0% bullets per shot
@@ -2726,8 +2737,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			TF2Items_SetAttribute(itemNew, 9, 808, 0.00); // Successive shots become less accurate
 			TF2Items_SetAttribute(itemNew, 10, 809, 0.00); // Fires a wide, fixed shot pattern
 		}}
-		case 594: { if (ItemIsEnabled(Wep_Phlogistinator)) {
-			switch (GetItemVariant(Wep_Phlogistinator)) {
+		case 594: { if (ItemIsEnabled(Wep_Phlogistinator, client)) {
+			switch (GetItemVariant(Wep_Phlogistinator, client)) {
 			// full health on taunt, MMMPH meter reduction, and defense buff handled elsewhere
 				case 0, 3: { // Pyromania and March 2012 Phlogistinator
 					TF2Items_SetNumAttributes(itemNew, 1);
@@ -2739,8 +2750,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 773: { if (ItemIsEnabled(Wep_PocketPistol)) {
-			switch (GetItemVariant(Wep_PocketPistol)) {
+		case 773: { if (ItemIsEnabled(Wep_PocketPistol, client)) {
+			switch (GetItemVariant(Wep_PocketPistol, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 8);
 					TF2Items_SetAttribute(itemNew, 0, 3, 1.0); // -0% clip size
@@ -2758,12 +2769,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 588: { if (GetItemVariant(Wep_Pomson) == 1) {
+		case 588: { if (GetItemVariant(Wep_Pomson, client) == 1) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 283, 1.0); // energy_weapon_penetration; NOTE: turns pomson projectile into bison projectile
 		}}
-		case 214: { if (ItemIsEnabled(Wep_Powerjack)) {
-			switch (GetItemVariant(Wep_Powerjack)) {
+		case 214: { if (ItemIsEnabled(Wep_Powerjack, client)) {
+			switch (GetItemVariant(Wep_Powerjack, client)) {
 				case 0: {
 					// Pre-Gun Mettle Powerjack (pre-2015)
 					TF2Items_SetNumAttributes(itemNew, 1);
@@ -2789,8 +2800,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 			// Overheal on kill handled elsewhere
 		}}
-		case 404: { if (ItemIsEnabled(Wep_Persian)) {
-			bool swords = ItemIsEnabled(Feat_Sword);
+		case 404: { if (ItemIsEnabled(Wep_Persian, client)) {
+			bool swords = ItemIsEnabled(Feat_Sword, client);
 			TF2Items_SetNumAttributes(itemNew, swords ? 7 : 6);
 			TF2Items_SetAttribute(itemNew, 0, 77, 1.00); // -0% max primary ammo on wearer
 			TF2Items_SetAttribute(itemNew, 1, 79, 1.00); // -0% max secondary ammo on wearer
@@ -2803,27 +2814,27 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 			sword_reverted = true;
 		}}
-		case 57: { if (ItemIsEnabled(Wep_Razorback)) {
+		case 57: { if (ItemIsEnabled(Wep_Razorback, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 800, 1.0); // -0% maximum overheal on wearer
 		}}
-		case 411: { if (ItemIsEnabled(Wep_QuickFix)) {
+		case 411: { if (ItemIsEnabled(Wep_QuickFix, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 10, 1.25); // +25% ÜberCharge rate
 		}}
-		case 1150: { if (ItemIsEnabled(Wep_Quickiebomb)) {
+		case 1150: { if (ItemIsEnabled(Wep_Quickiebomb, client)) {
 			TF2Items_SetNumAttributes(itemNew, 4); // attributes ported from NotnHeavy's pre-Gun Mettle plugin
 			TF2Items_SetAttribute(itemNew, 0, 3, 0.75); // -25% clip size
 			TF2Items_SetAttribute(itemNew, 1, 727, 1.25); // Up to +25% damage based on charge
 			TF2Items_SetAttribute(itemNew, 2, 669, 4.00); // Stickybombs fizzle 4 seconds after landing
 			TF2Items_SetAttribute(itemNew, 3, 670, 0.50); // Max charge time decreased by 50%
 		}}
-		case 810, 831: { if (ItemIsEnabled(Wep_RedTapeRecorder)) {
+		case 810, 831: { if (ItemIsEnabled(Wep_RedTapeRecorder, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 433, 0.9); // Downgrade speed; sapper_degenerates_buildings; default is 0.5 (3 seconds). release was 1.6 seconds (0.9 according to https://wiki.teamfortress.com/wiki/August_2,_2012_Patch)
 		}}
-		case 997: { if (ItemIsEnabled(Wep_RescueRanger)) {
-			switch (GetItemVariant(Wep_RescueRanger)) {
+		case 997: { if (ItemIsEnabled(Wep_RescueRanger, client)) {
+			switch (GetItemVariant(Wep_RescueRanger, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 2);
 					TF2Items_SetAttribute(itemNew, 0, 469, 130.0); // ranged pickup metal cost
@@ -2837,8 +2848,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 415: { if (ItemIsEnabled(Wep_ReserveShooter)) {
-			switch (GetItemVariant(Wep_ReserveShooter)) {
+		case 415: { if (ItemIsEnabled(Wep_ReserveShooter, client)) {
+			switch (GetItemVariant(Wep_ReserveShooter, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 3);
 					TF2Items_SetAttribute(itemNew, 0, 114, 0.0); // mod mini-crit airborne
@@ -2854,8 +2865,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 59: { if (ItemIsEnabled(Wep_DeadRinger)) {
-			switch (GetItemVariant(Wep_DeadRinger)) {
+		case 59: { if (ItemIsEnabled(Wep_DeadRinger, client)) {
+			switch (GetItemVariant(Wep_DeadRinger, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 5);
 					TF2Items_SetAttribute(itemNew, 0, 35, 1.8); // mult cloak meter regen rate
@@ -2879,8 +2890,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 44: { if (ItemIsEnabled(Wep_Sandman)) {
-			switch (GetItemVariant(Wep_Sandman)) {
+		case 44: { if (ItemIsEnabled(Wep_Sandman, client)) {
+			switch (GetItemVariant(Wep_Sandman, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 2);
 					TF2Items_SetAttribute(itemNew, 0, 125, -30.0); // -30 max health on wearer
@@ -2892,17 +2903,17 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 130: { if (ItemIsEnabled(Wep_Scottish)) {
+		case 130: { if (ItemIsEnabled(Wep_Scottish, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 6, 1.0); // fire rate bonus
 			TF2Items_SetAttribute(itemNew, 1, 120, 0.4); // sticky arm time penalty
 		}}
-		case 528: { if (GetItemVariant(Wep_ShortCircuit) == 1) {
+		case 528: { if (GetItemVariant(Wep_ShortCircuit, client) == 1) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 614, 1.0); // no metal from dispensers while active
 		}}
-		case 220: { if (ItemIsEnabled(Wep_Shortstop)) {
-			switch (GetItemVariant(Wep_Shortstop)) {
+		case 220: { if (ItemIsEnabled(Wep_Shortstop, client)) {
+			switch (GetItemVariant(Wep_Shortstop, client)) {
 				case 0: {
 					// Pre-Manniversary Shortstop
 					TF2Items_SetNumAttributes(itemNew, 3);
@@ -2928,8 +2939,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}	
 		}}
-		case 230: { if (ItemIsEnabled(Wep_SydneySleeper)) {
-			switch (GetItemVariant(Wep_SydneySleeper)) {
+		case 230: { if (ItemIsEnabled(Wep_SydneySleeper, client)) {
+			switch (GetItemVariant(Wep_SydneySleeper, client)) {
 				// jarate application handled elsewhere for all variants
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 1);
@@ -2949,8 +2960,8 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 448: { if (ItemIsEnabled(Wep_SodaPopper)) {
-			switch (GetItemVariant(Wep_SodaPopper)) {
+		case 448: { if (ItemIsEnabled(Wep_SodaPopper, client)) {
+			switch (GetItemVariant(Wep_SodaPopper, client)) {
 				case 0: {
 					TF2Items_SetNumAttributes(itemNew, 2);
 					TF2Items_SetAttribute(itemNew, 0, 15, 0.0); // crit mod disabled
@@ -2962,12 +2973,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 413: { if (ItemIsEnabled(Wep_Solemn)) {
+		case 413: { if (ItemIsEnabled(Wep_Solemn, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 5, 1.0); // fire rate penalty
 		}}
-		case 406: { if (ItemIsEnabled(Wep_SplendidScreen)) {
-			switch (GetItemVariant(Wep_SplendidScreen)) {
+		case 406: { if (ItemIsEnabled(Wep_SplendidScreen, client)) {
+			switch (GetItemVariant(Wep_SplendidScreen, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 3);
 					TF2Items_SetAttribute(itemNew, 0, 60, 0.75); // +25% fire damage resistance on wearer
@@ -2982,12 +2993,12 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}
 			}
 		}}
-		case 649: { if (ItemIsEnabled(Wep_Spycicle)) {
+		case 649: { if (ItemIsEnabled(Wep_Spycicle, client)) {
 			TF2Items_SetNumAttributes(itemNew, 1);
 			TF2Items_SetAttribute(itemNew, 0, 156, 1.0); // silent killer
 		}}
-		case 265: { if (ItemIsEnabled(Wep_StickyJumper)) {
-			switch (GetItemVariant(Wep_StickyJumper)) {
+		case 265: { if (ItemIsEnabled(Wep_StickyJumper, client)) {
+			switch (GetItemVariant(Wep_StickyJumper, client)) {
 				case 0: { // StkJumper_Pre2013 (Pyromania Update version)
 					TF2Items_SetNumAttributes(itemNew, 1);
 					TF2Items_SetAttribute(itemNew, 0, 89, 0.0); // max pipebombs decreased
@@ -3017,13 +3028,13 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 				}																
 			}
 		}}
-		case 131, 1144: { if (ItemIsEnabled(Wep_CharginTarge)) {
+		case 131, 1144: { if (ItemIsEnabled(Wep_CharginTarge, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 64, 0.6); // dmg taken from blast reduced
 			TF2Items_SetAttribute(itemNew, 1, 527, 1.0); // afterburn immunity
 		}}
-		case 424: { if (ItemIsEnabled(Wep_Tomislav)) {
-			switch (GetItemVariant(Wep_Tomislav)) {
+		case 424: { if (ItemIsEnabled(Wep_Tomislav, client)) {
+			switch (GetItemVariant(Wep_Tomislav, client)) {
 				case 1: {
 					TF2Items_SetNumAttributes(itemNew, 2);
 					TF2Items_SetAttribute(itemNew, 0, 87, 0.25); // 75% faster spin up time
@@ -3037,23 +3048,23 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			}
 			// Note: It is recommended for the minigun ramp-up revert to be active so that the reverted pre-Pyromania Tomislav is historically and functionally accurate!
 		}}
-		case 1099: { if (ItemIsEnabled(Wep_TideTurner)) {
+		case 1099: { if (ItemIsEnabled(Wep_TideTurner, client)) {
 			TF2Items_SetNumAttributes(itemNew, 3);
 			TF2Items_SetAttribute(itemNew, 0, 60, 0.75); // 25% fire damage resistance on wearer
 			TF2Items_SetAttribute(itemNew, 1, 64, 0.75); // 25% explosive damage resistance on wearer
 			TF2Items_SetAttribute(itemNew, 2, 676, 0.0); // Taking damage while shield charging reduces remaining charging time
 		}}
-		case 171: { if (ItemIsEnabled(Wep_TribalmansShiv)) {
+		case 171: { if (ItemIsEnabled(Wep_TribalmansShiv, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 1, 0.65); // -35% damage penalty
 			TF2Items_SetAttribute(itemNew, 1, 149, 8.0); // On Hit: Bleed for 8 seconds
 		}}
-		case 173: { if (ItemIsEnabled(Wep_VitaSaw)) {
+		case 173: { if (ItemIsEnabled(Wep_VitaSaw, client)) {
 			TF2Items_SetNumAttributes(itemNew, 2);
 			TF2Items_SetAttribute(itemNew, 0, 188, 20.0); // preserve ubercharge (doesn't work)
 			TF2Items_SetAttribute(itemNew, 1, 811, 0.0); // ubercharge preserved on spawn max
 		}}
-		case 310: { if (ItemIsEnabled(Wep_WarriorSpirit)) {
+		case 310: { if (ItemIsEnabled(Wep_WarriorSpirit, client)) {
 			TF2Items_SetNumAttributes(itemNew, 5);
 			TF2Items_SetAttribute(itemNew, 0, 110, 10.0); // On Hit: Gain up to +10 health
 			TF2Items_SetAttribute(itemNew, 1, 125, -20.0); // -20 max health on wearer
@@ -3061,7 +3072,7 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 			TF2Items_SetAttribute(itemNew, 3, 180, 0.0); // +0 health restored on kill
 			TF2Items_SetAttribute(itemNew, 4, 412, 1.0); // 0% damage vulnerability on wearer
 		}}
-		case 357: { if (ItemIsEnabled(Wep_Zatoichi)) {
+		case 357: { if (ItemIsEnabled(Wep_Zatoichi, client)) {
 			TF2Items_SetNumAttributes(itemNew, 4);
 			TF2Items_SetAttribute(itemNew, 0, 15, 1.0); // crit mod disabled
 			TF2Items_SetAttribute(itemNew, 1, 220, 0.0); // restore health on kill
@@ -3073,10 +3084,10 @@ public Action TF2Items_OnGiveNamedItem(int client, char[] class, int index, Hand
 	}
 
 	if (
-		ItemIsEnabled(Feat_Sword) &&
+		ItemIsEnabled(Feat_Sword, client) &&
 		!sword_reverted && //must be set to true on every weapon that implements Feat_Sword check! 
 		(StrEqual(class, "tf_weapon_sword") ||
-		(!ItemIsEnabled(Wep_Zatoichi) && (index == 357)) )
+		(!ItemIsEnabled(Wep_Zatoichi, client) && (index == 357)) )
 	) {
 		TF2Items_SetNumAttributes(itemNew, 2);
 		TF2Items_SetAttribute(itemNew, 0, 781, 0.0); // is a sword
@@ -3107,10 +3118,29 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 		players[client].ticks_since_switch = 0;
 
 		{
+			// apply attrib changes
+
+			if (IsPlayerAlive(client)) {
+				ItemPlayerApply(client);
+
+				if (players[client].change) {
+					// tf2 only respawns a player's weapon/wearable entities when those entities are different from
+					// the ones that should be equipped, aka when the player changes class or equips a different weapon.
+					// we manually force it to happen by removing the entities and respawning the player a few ticks later.
+
+					PlayerRemoveEquipment(client);
+
+					players[client].respawn = GetGameTickCount();
+					players[client].change = false;
+				}
+			}
+		}
+
+		{
 			// vitasaw charge apply
 
 			if (
-				ItemIsEnabled(Wep_VitaSaw) &&
+				ItemIsEnabled(Wep_VitaSaw, client) &&
 				IsPlayerAlive(client) &&
 				TF2_GetPlayerClass(client) == TFClass_Medic &&
 				GameRules_GetRoundState() == RoundState_RoundRunning
@@ -3156,7 +3186,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 			client > 0 &&
 			client <= MaxClients &&
 			IsClientInGame(client) && 
-			ItemIsEnabled(Wep_Wrangler)
+			ItemIsEnabled(Wep_Wrangler, client)
 		) {
 			// 1 second sentry disable if wrangler shield active && engineer dies.
 			// should not effect the normal 3 second disable on engineer weapon switch etc.
@@ -3207,7 +3237,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						GetEntityClassname(weapon, class, sizeof(class));
 
 						if (
-							ItemIsEnabled(Wep_Zatoichi) &&
+							ItemIsEnabled(Wep_Zatoichi, attacker) &&
 							StrEqual(class, "tf_weapon_katana")
 						) {
 							// zatoichi heal on kill
@@ -3228,7 +3258,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						}
 
 						if (
-							ItemIsEnabled(Wep_Powerjack) &&
+							ItemIsEnabled(Wep_Powerjack, attacker) &&
 							GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 214 &&
 							// fix to prevent powerjack gaining hp while active from players burning to death by flamethrowers, flareguns and reflected burning arrows
 							GetEventInt(event,"customkill") == TF_DMG_CUSTOM_NONE // powerjack melee kill has a customkill value of 0, thanks huutti; -mindfulprotons
@@ -3238,7 +3268,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						}
 
 						if (
-							GetItemVariant(Wep_CleanerCarbine) == 0 &&
+							GetItemVariant(Wep_CleanerCarbine, attacker) == 0 &&
 							TF2_GetPlayerClass(attacker) == TFClass_Sniper &&
 							HasEntProp(weapon, Prop_Send, "m_flMinicritCharge") &&
 							GetEventInt(event,"customkill") == TF_DMG_CUSTOM_NONE
@@ -3264,7 +3294,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						GetEntityClassname(weapon, class, sizeof(class));
 
 						if (
-							ItemIsEnabled(Wep_Ambassador) &&
+							ItemIsEnabled(Wep_Ambassador, attacker) &&
 							StrEqual(class, "tf_weapon_revolver")
 						) {
 							event.SetInt("customkill", TF_CUSTOM_HEADSHOT);
@@ -3333,7 +3363,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					else if (StrEqual(class, "tf_weapon_grenadelauncher")) {
 						player_weapons[client][Feat_Grenade] = true;
 
-						if (ItemIsEnabled(Feat_Grenade)) {
+						if (ItemIsEnabled(Feat_Grenade, client)) {
 							TF2Attrib_SetByDefIndex(weapon, 99, 1.089); // +8.9% explosion radius
 							// Old radius: 159 Hu, Modern radius: 146 Hu. 159/146 = 1.089
 						}
@@ -3342,7 +3372,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					else if (StrEqual(class, "tf_weapon_pipebomblauncher")) {
 						player_weapons[client][Feat_Stickybomb] = true;
 
-						if (ItemIsEnabled(Feat_Stickybomb)) {
+						if (ItemIsEnabled(Feat_Stickybomb, client)) {
 							TF2Attrib_SetByDefIndex(weapon, 99, 1.089); // +8.9% explosion radius
 							// Old radius: 159 Hu, Modern radius: 146 Hu. 159/146 = 1.089
 						}
@@ -3350,7 +3380,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 
 					else if (
 						StrEqual(class, "tf_weapon_sword") ||
-						(!ItemIsEnabled(Wep_Zatoichi) && StrEqual(class, "tf_weapon_katana"))
+						(!ItemIsEnabled(Wep_Zatoichi, client) && StrEqual(class, "tf_weapon_katana"))
 					) {
 						player_weapons[client][Feat_Sword] = true;
 					}
@@ -3427,7 +3457,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						case 220: {
 							player_weapons[client][Wep_Shortstop] = true;
 
-							if (ItemIsEnabled(Wep_Shortstop)) {
+							if (ItemIsEnabled(Wep_Shortstop, client)) {
 								// Reverted Shortstop uses secondary ammo
 								SetEntProp(weapon, Prop_Send, "m_iPrimaryAmmoType", 2);
 							}
@@ -3465,12 +3495,12 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 
 		//item sets
 		if (
-			ItemIsEnabled(Set_SpDelivery) ||
-			ItemIsEnabled(Set_GasJockey) ||
-			ItemIsEnabled(Set_Expert) ||
-			ItemIsEnabled(Set_Hibernate) ||
-			ItemIsEnabled(Set_CrocoStyle) ||
-			ItemIsEnabled(Set_Saharan)
+			ItemIsEnabled(Set_SpDelivery, client) ||
+			ItemIsEnabled(Set_GasJockey, client) ||
+			ItemIsEnabled(Set_Expert, client) ||
+			ItemIsEnabled(Set_Hibernate, client) ||
+			ItemIsEnabled(Set_CrocoStyle, client) ||
+			ItemIsEnabled(Set_Saharan, client)
 		) {
 			// reset set bonuses on loadout changes
 			switch (TF2_GetPlayerClass(client))
@@ -3519,35 +3549,35 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 					switch(index) {
 						// Special Delivery
 						case 220, 221, 222, 572, 999, 1121: {
-							if(ItemIsEnabled(Set_SpDelivery)) {
+							if(ItemIsEnabled(Set_SpDelivery, client)) {
 								wep_count++;
 								if(wep_count == 3) active_set = Set_SpDelivery;
 							}
 						}
 						// Gas Jockey's Gear
 						case 214, 215: {
-							if(ItemIsEnabled(Set_GasJockey)) {
+							if(ItemIsEnabled(Set_GasJockey, client)) {
 								wep_count++;
 								if(wep_count == 2) active_set = Set_GasJockey;
 							}
 						}
 						// Expert's Ordnance
 						case 307, 308: {
-							if(ItemIsEnabled(Set_Expert)) {
+							if(ItemIsEnabled(Set_Expert, client)) {
 								wep_count++;
 								if(wep_count == 2) active_set = Set_Expert;
 							}
 						}
 						// Hibernating Bear
 						case 310, 311, 312: {
-							if(ItemIsEnabled(Set_Hibernate)) {
+							if(ItemIsEnabled(Set_Hibernate, client)) {
 								wep_count++;
 								if(wep_count == 3) active_set = Set_Hibernate;
 							}
 						}
 						// Croc-o-Style Kit
 						case 230, 232: {
-							if(ItemIsEnabled(Set_CrocoStyle)) {
+							if(ItemIsEnabled(Set_CrocoStyle, client)) {
 								wep_count++;
 								if(wep_count == 2) active_set = Set_CrocoStyle;
 							}
@@ -3555,7 +3585,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 						// Saharan Spy
 						case 224, 225, 574: {
 							if (
-								GetItemVariant(Set_Saharan) == 0 &&
+								GetItemVariant(Set_Saharan, client) == 0 &&
 								index != 574 // exclude Wanga Prick
 							) {
 								if (index == 224 && first_wep == -1) {
@@ -3565,7 +3595,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 								}
 								wep_count++;
 								if(wep_count == 2) active_set = Set_Saharan;
-							}else if(GetItemVariant(Set_Saharan) == 1) {
+							}else if(GetItemVariant(Set_Saharan, client) == 1) {
 								wep_count++;
 								if(wep_count == 2) active_set = Set_Saharan;
 							}
@@ -3630,7 +3660,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 							player_weapons[client][Set_Saharan] = true;
 							TF2Attrib_SetByDefIndex(client, 159, 0.5); // SET BONUS: cloak blink time penalty
 							TF2Attrib_SetByDefIndex(client, 160, 1.0); // SET BONUS: quiet unstealth
-							if (GetItemVariant(Set_Saharan) == 0 && first_wep != -1)
+							if (GetItemVariant(Set_Saharan, client) == 0 && first_wep != -1)
 							{
 								TF2Attrib_SetByDefIndex(first_wep, 83, 1.0); // +0% cloak duration
 							}
@@ -3644,7 +3674,7 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 			// if player has a drink item, end minicrits and apply hype
 
 			if (
-				GetItemVariant(Wep_SodaPopper) == 0 &&
+				GetItemVariant(Wep_SodaPopper, client) == 0 &&
 				players[client].is_under_hype
 			) {
 				if (player_weapons[client][Wep_SodaPopper]) {
@@ -3683,9 +3713,9 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 				for (int i = 0; i < NUM_ITEMS; i++) {
 					if(
 						player_weapons[client][i] &&
-						ItemIsEnabled(i)
+						ItemIsEnabled(i, client)
 					) {
-						variant_idx = GetItemVariant(i);
+						variant_idx = GetItemVariant(i, client);
 						if (variant_idx > -1) {
 							Format(msg[count], sizeof(msg[count]), "{gold}%T {lightgreen}- %T", items[i].key, client, items_desc[i][variant_idx], client);
 							count++;
@@ -3724,14 +3754,12 @@ Action OnGameEvent(Event event, const char[] name, bool dontbroadcast) {
 }
 
 Action CommandListener_EurekaTeleport(int client, const char[] command, int argc) {
-	if (TF2_GetPlayerClass(client) != TFClass_Engineer)
-		return Plugin_Continue;
-
 	if (
-		ItemIsEnabled(Wep_EurekaEffect) &&
 		client >= 1 &&
 		client <= MaxClients
 	) {
+		if (TF2_GetPlayerClass(client) != TFClass_Engineer)
+			return Plugin_Continue;
 
 		if (argc == 0) {
 			players[client].eureka_teleport_target = EUREKA_TELEPORT_HOME;
@@ -3761,7 +3789,7 @@ Action OnSoundNormal(
 	if (StrContains(sample, "player/pl_impact_stun") == 0) {
 		for (idx = 1; idx <= MaxClients; idx++) {
 			if (
-				ItemIsEnabled(Wep_Sandman) &&
+				ItemIsEnabled(Wep_Sandman, idx) &&
 				players[idx].projectile_touch_frame == GetGameTickCount()
 			) {
 				// cancel duplicate sandman stun sounds
@@ -3770,7 +3798,7 @@ Action OnSoundNormal(
 			}
 
 			if (
-				ItemIsEnabled(Wep_Bonk) &&
+				ItemIsEnabled(Wep_Bonk, idx) &&
 				players[idx].bonk_cond_frame == GetGameTickCount()
 			) {
 				// cancel bonk stun sound
@@ -3810,8 +3838,8 @@ Action OnSoundNormal(
 	if (StrContains(sample, "demo_charge_hit_flesh_range") != -1) {
 		for (idx = 1; idx <= MaxClients; idx++) {
 			if (
-				((ItemIsEnabled(Wep_CharginTarge) && player_weapons[idx][Wep_CharginTarge]) ||
-				(ItemIsEnabled(Wep_TideTurner) && player_weapons[idx][Wep_TideTurner])) &&
+				((ItemIsEnabled(Wep_CharginTarge, idx) && player_weapons[idx][Wep_CharginTarge]) ||
+				(ItemIsEnabled(Wep_TideTurner, idx) && player_weapons[idx][Wep_TideTurner])) &&
 				TF2_IsPlayerInCondition(idx, TFCond_Charging)
 			) {
 				char path[64];
@@ -3849,9 +3877,7 @@ Action SDKHookCB_Spawn(int entity) {
 				owner >= 1 &&
 				owner <= MaxClients
 			) {
-				if (ItemIsEnabled(Wep_EurekaEffect)) {
-					players[owner].is_eureka_teleporting = true;
-				}
+				players[owner].is_eureka_teleporting = true;
 			}
 		}
 	}
@@ -3885,8 +3911,8 @@ void SDKHookCB_SpawnPost(int entity) {
 				GetEntityClassname(weapon, class, sizeof(class));
 
 				if (
-					(ItemIsEnabled(Wep_Bison) && StrEqual(class, "tf_weapon_raygun")) ||
-					(ItemIsEnabled(Wep_Pomson) && StrEqual(class, "tf_weapon_drg_pomson"))
+					(ItemIsEnabled(Wep_Bison, owner) && StrEqual(class, "tf_weapon_raygun")) ||
+					(ItemIsEnabled(Wep_Pomson, owner) && StrEqual(class, "tf_weapon_drg_pomson"))
 				) {
 					maxs[0] = 2.0;
 					maxs[1] = 2.0;
@@ -3949,8 +3975,8 @@ Action SDKHookCB_Touch(int entity, int other) {
 					GetEntityClassname(weapon, class, sizeof(class));
 
 					if (
-						(ItemIsEnabled(Wep_Bison) && StrEqual(class, "tf_weapon_raygun") || 
-						ItemIsEnabled(Wep_Pomson) && StrEqual(class, "tf_weapon_drg_pomson")) &&
+						(ItemIsEnabled(Wep_Bison, owner) && StrEqual(class, "tf_weapon_raygun") || 
+						ItemIsEnabled(Wep_Pomson, owner) && StrEqual(class, "tf_weapon_drg_pomson")) &&
 						TF2_GetClientTeam(other) == TF2_GetClientTeam(owner)
 					) {
 						weapon = GetEntPropEnt(other, Prop_Send, "m_hActiveWeapon");
@@ -3962,8 +3988,8 @@ Action SDKHookCB_Touch(int entity, int other) {
 						
 						// Pomson pass through teammates, unless pre-Gun Mettle variant is used
 						if (
-							ItemIsEnabled(Wep_Pomson) &&
-							GetItemVariant(Wep_Pomson) != 2
+							ItemIsEnabled(Wep_Pomson, owner) &&
+							GetItemVariant(Wep_Pomson, owner) != 2
 						) {
 							return Plugin_Handled;
 						}
@@ -3977,8 +4003,8 @@ Action SDKHookCB_Touch(int entity, int other) {
 				GetEntityClassname(weapon, class, sizeof(class));
 				
 				if (
-					(ItemIsEnabled(Wep_Bison) && StrEqual(class, "tf_weapon_raygun")) || 
-					(ItemIsEnabled(Wep_Pomson) && StrEqual(class, "tf_weapon_drg_pomson"))
+					(ItemIsEnabled(Wep_Bison, owner) && StrEqual(class, "tf_weapon_raygun")) || 
+					(ItemIsEnabled(Wep_Pomson, owner) && StrEqual(class, "tf_weapon_drg_pomson"))
 				) {
 					GetEntityClassname(other, class, sizeof(class));
 
@@ -4082,7 +4108,7 @@ Action SDKHookCB_OnTakeDamage(
 						StrEqual(class, "tf_weapon_invis") &&
 						GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 59
 					) {
-						switch (GetItemVariant(Wep_DeadRinger)) {
+						switch (GetItemVariant(Wep_DeadRinger, victim)) {
 							case 0, 3: {
 								// "Old-Style" Dead Ringer Stats
 								cvar_ref_tf_feign_death_duration.FloatValue = 0.0;
@@ -4110,8 +4136,8 @@ Action SDKHookCB_OnTakeDamage(
 
 				// "old-style" dead ringer track when feign begins
 				if (
-					GetItemVariant(Wep_DeadRinger) == 0 ||
-					GetItemVariant(Wep_DeadRinger) == 3
+					GetItemVariant(Wep_DeadRinger, victim) == 0 ||
+					GetItemVariant(Wep_DeadRinger, victim) == 3
 				) {
 					if (
 						GetEntProp(victim, Prop_Send, "m_bFeignDeathReady") &&
@@ -4127,7 +4153,7 @@ Action SDKHookCB_OnTakeDamage(
 			// turner charge loss on damage taken
 
 			if (
-				ItemIsEnabled(Wep_TideTurner) &&
+				ItemIsEnabled(Wep_TideTurner, victim) &&
 				victim != attacker &&
 				(damage_type & DMG_FALL) == 0 &&
 				TF2_GetPlayerClass(victim) == TFClass_DemoMan &&
@@ -4202,9 +4228,9 @@ Action SDKHookCB_OnTakeDamage(
 					if (StrEqual(class, "tf_weapon_minigun")) {
 
 						if (
-							ItemIsEnabled(Wep_BrassBeast) &&
+							ItemIsEnabled(Wep_BrassBeast, victim) &&
 							GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 312 ||
-							GetItemVariant(Wep_Natascha) == 0 &&
+							GetItemVariant(Wep_Natascha, victim) == 0 &&
 							GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 41
 						) {
 							float spunup_resist = TF2Attrib_HookValueFloat(1.0, "spunup_damage_resistance", weapon1);
@@ -4241,7 +4267,7 @@ Action SDKHookCB_OnTakeDamage(
 				// caber damage
 
 				if (
-					ItemIsEnabled(Wep_Caber) &&
+					ItemIsEnabled(Wep_Caber, attacker) &&
 					StrEqual(class, "tf_weapon_stickbomb")
 				) {
 					if (
@@ -4281,7 +4307,7 @@ Action SDKHookCB_OnTakeDamage(
 				// cannon impact damage
 
 				if (
-					ItemIsEnabled(Wep_LooseCannon) &&
+					ItemIsEnabled(Wep_LooseCannon, attacker) &&
 					StrEqual(class, "tf_weapon_cannon")
 				) {
 					if (
@@ -4299,7 +4325,7 @@ Action SDKHookCB_OnTakeDamage(
 				// grenade damage variance on hit location
 				
 				if (
-					ItemIsEnabled(Feat_Grenade) &&
+					ItemIsEnabled(Feat_Grenade, attacker) &&
 					StrEqual(class, "tf_weapon_grenadelauncher")
 				) {
 					// Vary damage by up to 10%, with most damage at the player's feet and least at the head
@@ -4313,7 +4339,7 @@ Action SDKHookCB_OnTakeDamage(
 				// ambassador headshot crits
 
 				if (
-					ItemIsEnabled(Wep_Ambassador) &&
+					ItemIsEnabled(Wep_Ambassador, attacker) &&
 					StrEqual(class, "tf_weapon_revolver") &&
 					players[attacker].headshot_frame == GetGameTickCount() &&
 					(
@@ -4330,7 +4356,7 @@ Action SDKHookCB_OnTakeDamage(
 				// equalizer damage bonus
 
 				if (
-					ItemIsEnabled(Wep_Pickaxe) &&
+					ItemIsEnabled(Wep_Pickaxe, attacker) &&
 					damage_custom == TF_DMG_CUSTOM_PICKAXE &&
 					StrEqual(class, "tf_weapon_shovel") &&
 					(
@@ -4343,7 +4369,7 @@ Action SDKHookCB_OnTakeDamage(
 
 					float multiplier = 1.0;
 
-					switch (GetItemVariant(Wep_Pickaxe))
+					switch (GetItemVariant(Wep_Pickaxe, attacker))
 					{
 						case 0: multiplier = 1.65; // Pre-Pyromania Equalizer (pre-June 27, 2012); 107 dmg at 1 HP
 						case 1: multiplier = 1.75; // Pre-Hatless Update Equalizer (pre-April 14, 2011); 113 dmg at 1 HP
@@ -4360,7 +4386,7 @@ Action SDKHookCB_OnTakeDamage(
 				// reserve airborne minicrits
 
 				if (
-					ItemIsEnabled(Wep_ReserveShooter) &&
+					ItemIsEnabled(Wep_ReserveShooter, attacker) &&
 					StrContains(class, "tf_weapon_shotgun") == 0 &&
 					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 415
 				) {
@@ -4370,11 +4396,11 @@ Action SDKHookCB_OnTakeDamage(
 						TF2_IsPlayerInCondition(victim, TFCond_MarkedForDeathSilent) == false
 					) {
 						if (
-							(GetItemVariant(Wep_ReserveShooter) == 0 &&
+							(GetItemVariant(Wep_ReserveShooter, attacker) == 0 &&
 							(players[attacker].ticks_since_switch < 66 * 5)) ||
-							(GetItemVariant(Wep_ReserveShooter) == 1 &&
+							(GetItemVariant(Wep_ReserveShooter, attacker) == 1 &&
 							TF2_IsPlayerInCondition(victim, TFCond_KnockedIntoAir) == true) ||
-							(GetItemVariant(Wep_ReserveShooter) == 2 &&
+							(GetItemVariant(Wep_ReserveShooter, attacker) == 2 &&
 							(players[attacker].ticks_since_switch < 66 * 3))
 						) {
 							// seems to be the best way to force a minicrit
@@ -4388,7 +4414,7 @@ Action SDKHookCB_OnTakeDamage(
 				// soda popper minicrits
 
 				if (
-					GetItemVariant(Wep_SodaPopper) == 0 &&
+					GetItemVariant(Wep_SodaPopper, attacker) == 0 &&
 					TF2_IsPlayerInCondition(attacker, TFCond_CritHype) == true &&
 					TF2_IsPlayerInCondition(victim, TFCond_MarkedForDeathSilent) == false
 				) {
@@ -4400,7 +4426,7 @@ Action SDKHookCB_OnTakeDamage(
 				// pre-bluemoon atomizer airborne minicrits
 
 				if (
-					GetItemVariant(Wep_Atomizer) == 1 &&
+					GetItemVariant(Wep_Atomizer, attacker) == 1 &&
 					StrEqual(class, "tf_weapon_bat") &&
 					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 450 &&
 					(GetEntityFlags(attacker) & FL_ONGROUND) == 0 &&
@@ -4415,7 +4441,7 @@ Action SDKHookCB_OnTakeDamage(
 				// sandman stun
 
 				if (
-					ItemIsEnabled(Wep_Sandman) &&
+					ItemIsEnabled(Wep_Sandman, attacker) &&
 					damage_custom == TF_DMG_CUSTOM_BASEBALL &&
 					!StrEqual(class, "tf_weapon_bat_giftwrap") //reflected wrap will stun I think, lol!
 				) {
@@ -4440,7 +4466,7 @@ Action SDKHookCB_OnTakeDamage(
 									stun_dur = (stun_dur + 2.0);
 								}
 
-								stun_fls = GetItemVariant(Wep_Sandman) == 0 ? TF_STUNFLAGS_SMALLBONK : TF_STUNFLAGS_NORMALBONK;
+								stun_fls = GetItemVariant(Wep_Sandman, attacker) == 0 ? TF_STUNFLAGS_SMALLBONK : TF_STUNFLAGS_NORMALBONK;
 
 								if (stun_amt >= 1.0) {
 									// moonshot!
@@ -4479,28 +4505,28 @@ Action SDKHookCB_OnTakeDamage(
 				// sleeper jarate mechanics
 
 				if (
-					ItemIsEnabled(Wep_SydneySleeper) &&
+					ItemIsEnabled(Wep_SydneySleeper, attacker) &&
 					StrEqual(class, "tf_weapon_sniperrifle") &&
 					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 230
 				) {
 					charge = GetEntPropFloat(weapon, Prop_Send, "m_flChargedDamage");
 
 					if (
-						(GetItemVariant(Wep_SydneySleeper) == 0 &&
+						(GetItemVariant(Wep_SydneySleeper, attacker) == 0 &&
 						charge > 0.1) ||
-						(GetItemVariant(Wep_SydneySleeper) >= 1 &&
+						(GetItemVariant(Wep_SydneySleeper, attacker) >= 1 &&
 						charge > 0.1 &&
 						GetGameTime() - players[attacker].aiming_cond_time >= 1.0)
 					) {
 						if (
-							GetItemVariant(Wep_SydneySleeper) == 2 ||
+							GetItemVariant(Wep_SydneySleeper, attacker) == 2 ||
 							PlayerIsInvulnerable(victim) == false
 						) {
 							players[attacker].sleeper_piss_frame = GetGameTickCount();
 							players[attacker].sleeper_piss_explode = false;
 
 							// this should cause a jarate application
-							switch (GetItemVariant(Wep_SydneySleeper)) {
+							switch (GetItemVariant(Wep_SydneySleeper, attacker)) {
 								case 0: {
 									players[attacker].sleeper_piss_duration = ValveRemapVal(charge, 50.0, 150.0, 2.0, 8.0);
 									if (
@@ -4522,7 +4548,7 @@ Action SDKHookCB_OnTakeDamage(
 					}
 
 					if (
-						GetItemVariant(Wep_SydneySleeper) == 2 &&
+						GetItemVariant(Wep_SydneySleeper, attacker) == 2 &&
 						cvar_ref_tf_weapon_criticals.BoolValue
 					) {
 						// workaround for enabling random crits on release sydney sleeper
@@ -4558,7 +4584,10 @@ Action SDKHookCB_OnTakeDamage(
 						GetEntityClassname(weapon1, class, sizeof(class));
 
 						if (StrEqual(class, "tf_weapon_katana")) {
-							if (ItemIsEnabled(Wep_Zatoichi)) {
+							if (
+								ItemIsEnabled(Wep_Zatoichi, attacker) ||
+								ItemIsEnabled(Wep_Zatoichi, victim)
+							) {
 								damage1 = (float(GetEntProp(victim, Prop_Send, "m_iHealth")) * 3.0);
 
 								if (damage1 > damage) {
@@ -4579,7 +4608,7 @@ Action SDKHookCB_OnTakeDamage(
 				// guillotine minicrits
 
 				if (
-					ItemIsEnabled(Wep_Cleaver) &&
+					ItemIsEnabled(Wep_Cleaver, attacker) &&
 					damage > 20.0 && // don't count bleed damage
 					StrEqual(class, "tf_weapon_cleaver")
 				) {
@@ -4607,7 +4636,7 @@ Action SDKHookCB_OnTakeDamage(
 			{
 				// pre-GM Black Box heal on hit
 				if (
-					ItemIsEnabled(Wep_BlackBox) &&
+					ItemIsEnabled(Wep_BlackBox, attacker) &&
 					StrEqual(class,"tf_weapon_rocketlauncher") &&
 					(GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 228 ||
 					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 1085) &&
@@ -4631,9 +4660,9 @@ Action SDKHookCB_OnTakeDamage(
 				// shield bash
 				if (
 					damage_custom == TF_DMG_CUSTOM_CHARGE_IMPACT &&
-					((ItemIsEnabled(Wep_CharginTarge) && player_weapons[attacker][Wep_CharginTarge]) ||
-					(ItemIsEnabled(Wep_SplendidScreen) && player_weapons[attacker][Wep_SplendidScreen]) ||
-					(ItemIsEnabled(Wep_TideTurner) && player_weapons[attacker][Wep_TideTurner])) &&
+					((ItemIsEnabled(Wep_CharginTarge, attacker) && player_weapons[attacker][Wep_CharginTarge]) ||
+					(ItemIsEnabled(Wep_SplendidScreen, attacker) && player_weapons[attacker][Wep_SplendidScreen]) ||
+					(ItemIsEnabled(Wep_TideTurner, attacker) && player_weapons[attacker][Wep_TideTurner])) &&
 					StrEqual(class, "tf_wearable_demoshield")
 				) {
 					// crit after shield bash if melee is active weapon
@@ -4665,7 +4694,7 @@ Action SDKHookCB_OnTakeDamage(
 			{
 				// Natascha stun. Stun amount/duration taken from TF2 source code. Imported from NotnHeavy's pre-GM plugin
 				if (
-					GetItemVariant(Wep_Natascha) == 1 &&
+					GetItemVariant(Wep_Natascha, attacker) == 1 &&
 					StrEqual(class,"tf_weapon_minigun") &&
 					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 41
 				) {
@@ -4680,7 +4709,7 @@ Action SDKHookCB_OnTakeDamage(
 				// Somehow even with the "cannot be crit boosted" attribute, 
 				// the reverted Cow Mangler still does crits while crit boosted even when the crit boost glow doesn't show up.
 				if (
-					ItemIsEnabled(Wep_CowMangler) &&
+					ItemIsEnabled(Wep_CowMangler, attacker) &&
 					StrEqual(class, "tf_weapon_particle_cannon") &&
 					damage_type & DMG_CRIT != 0
 				) {
@@ -4699,8 +4728,8 @@ Action SDKHookCB_OnTakeDamage(
 						GetEntityClassname(weapon, class, sizeof(class));
 
 						if (
-							(ItemIsEnabled(Wep_Bison) && StrEqual(class, "tf_weapon_raygun")) ||
-							(ItemIsEnabled(Wep_Pomson) && StrEqual(class, "tf_weapon_drg_pomson"))
+							(ItemIsEnabled(Wep_Bison, attacker) && StrEqual(class, "tf_weapon_raygun")) ||
+							(ItemIsEnabled(Wep_Pomson, attacker) && StrEqual(class, "tf_weapon_drg_pomson"))
 						) {
 							if (
 								(players[victim].bison_hit_frame + 0) == GetGameTickCount() ||
@@ -4741,8 +4770,8 @@ Action SDKHookCB_OnTakeDamage(
 
 							// Historically accurate Pre-TB Bison/Pomson damage numbers against players ported from NotnHeavy's pre-GM plugin
 							if (
-								(GetItemVariant(Wep_Bison) == 1 && should_penetrate) ||
-								(GetItemVariant(Wep_Pomson) == 2 && !should_penetrate)
+								(GetItemVariant(Wep_Bison, attacker) == 1 && should_penetrate) ||
+								(GetItemVariant(Wep_Pomson, attacker) == 2 && !should_penetrate)
 							) {
 								// Do not use internal rampup/falloff.
 								if (damage_type & DMG_USEDISTANCEMOD != 0) damage_type ^= DMG_USEDISTANCEMOD;
@@ -4773,8 +4802,7 @@ Action SDKHookCB_OnTakeDamage(
 						GetEntityClassname(weapon, class, sizeof(class));
 
 						if (
-							ItemIsEnabled(Wep_CowMangler) &&
-							GetItemVariant(Wep_CowMangler) == 0 &&
+							GetItemVariant(Wep_CowMangler, attacker) == 0 &&
 							StrEqual(class, "tf_weapon_particle_cannon")
 						) {
 							GetEntPropVector(inflictor, Prop_Send, "m_vecOrigin", pos1);
@@ -4818,7 +4846,7 @@ Action SDKHookCB_OnTakeDamage_Building(
 			// caber damage
 
 			if (
-				ItemIsEnabled(Wep_Caber) &&
+				ItemIsEnabled(Wep_Caber, attacker) &&
 				StrEqual(class, "tf_weapon_stickbomb")
 			) {
 				if (
@@ -4841,7 +4869,7 @@ Action SDKHookCB_OnTakeDamage_Building(
 			// cannon impact damage
 
 			if (
-				ItemIsEnabled(Wep_LooseCannon) &&
+				ItemIsEnabled(Wep_LooseCannon, attacker) &&
 				StrEqual(class, "tf_weapon_cannon") &&
 				damage_custom == TF_DMG_CUSTOM_CANNONBALL_PUSH
 			) {
@@ -4853,7 +4881,7 @@ Action SDKHookCB_OnTakeDamage_Building(
 			// equalizer damage bonus
 
 			if (
-				ItemIsEnabled(Wep_Pickaxe) &&
+				ItemIsEnabled(Wep_Pickaxe, attacker) &&
 				damage_custom == TF_DMG_CUSTOM_PICKAXE &&
 				StrEqual(class, "tf_weapon_shovel") &&
 				(
@@ -4866,7 +4894,7 @@ Action SDKHookCB_OnTakeDamage_Building(
 
 				float multiplier = 1.0;
 
-				switch (GetItemVariant(Wep_Pickaxe))
+				switch (GetItemVariant(Wep_Pickaxe, attacker))
 				{
 					case 0: multiplier = 1.65; // Pre-Pyromania Equalizer (pre-June 27, 2012); 107 dmg at 1 HP
 					case 1: multiplier = 1.75; // Pre-Hatless Update Equalizer (pre-April 14, 2011); 113 dmg at 1 HP
@@ -4884,8 +4912,7 @@ Action SDKHookCB_OnTakeDamage_Building(
 			// Commenting this because I can't figure out how to revert the old damage falloff against players
 
 			if (
-				ItemIsEnabled(Wep_CowMangler) &&
-				GetItemVariant(Wep_CowMangler) == 0 &&
+				GetItemVariant(Wep_CowMangler, attacker) == 0 &&
 				StrEqual(class, "tf_weapon_particle_cannon")
 			) {
 				// Building base damage should be 16 dmg
@@ -4962,7 +4989,7 @@ Action SDKHookCB_OnTakeDamageAlive(
 			// sleeper jarate application
 
 			if (
-				ItemIsEnabled(Wep_SydneySleeper) &&
+				ItemIsEnabled(Wep_SydneySleeper, attacker) &&
 				players[attacker].sleeper_piss_frame == GetGameTickCount()
 			) {
 				// condition must be added in OnTakeDamageAlive, otherwise initial shot will crit
@@ -4982,7 +5009,7 @@ Action SDKHookCB_OnTakeDamageAlive(
 		{
 			// pre-2014 grenade random damage spread
 			if (
-				ItemIsEnabled(Feat_Grenade) &&
+				ItemIsEnabled(Feat_Grenade, attacker) &&
 				damage_type & DMG_CRIT == 0 &&
 				cvar_ref_tf_damage_disablespread.BoolValue == false
 			) {
@@ -5005,13 +5032,13 @@ Action SDKHookCB_OnTakeDamageAlive(
 			) {
 				if (
 					// Kamikaze taunt tanking for all Rocket Jumper variants
-					(ItemIsEnabled(Wep_RocketJumper) &&
+					(ItemIsEnabled(Wep_RocketJumper, victim) &&
 					player_weapons[victim][Wep_RocketJumper] &&
 					damage_custom == TF_DMG_CUSTOM_TAUNTATK_GRENADE) ||
 					// All self blast damage tanking for some Rocket Jumper and Sticky Jumper variants
-					(GetItemVariant(Wep_RocketJumper) >= 1 &&
+					(GetItemVariant(Wep_RocketJumper, victim) >= 1 &&
 					player_weapons[victim][Wep_RocketJumper]) ||
-					(GetItemVariant(Wep_StickyJumper) >= 2 &&
+					(GetItemVariant(Wep_StickyJumper, victim) >= 2 &&
 					player_weapons[victim][Wep_StickyJumper])
 				) {
 					players[victim].old_health = GetClientHealth(victim);
@@ -5022,7 +5049,8 @@ Action SDKHookCB_OnTakeDamageAlive(
 		{
 			// 90% damage resistance revert for Release and March 2012 Phlog variants
 			if (
-				(GetItemVariant(Wep_Phlogistinator) == 2 || GetItemVariant(Wep_Phlogistinator) == 3) &&
+				(GetItemVariant(Wep_Phlogistinator, victim) == 2 ||
+				GetItemVariant(Wep_Phlogistinator, victim) == 3) &&
 				player_weapons[victim][Wep_Phlogistinator] &&
 				TF2_IsPlayerInCondition(victim, TFCond_DefenseBuffMmmph) &&
 				damage_custom != TF_DMG_CUSTOM_BACKSTAB && // Defense buff does not protect against backstabs according to the Wiki.
@@ -5078,9 +5106,9 @@ void SDKHookCB_OnTakeDamagePost(
 					if (StrEqual(class, "tf_weapon_minigun")) {
 
 						if (
-							ItemIsEnabled(Wep_BrassBeast) &&
+							ItemIsEnabled(Wep_BrassBeast, victim) &&
 							GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 312 ||
-							GetItemVariant(Wep_Natascha) == 0 &&
+							GetItemVariant(Wep_Natascha, victim) == 0 &&
 							GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 41
 						) {
 							// remove temp attribs
@@ -5104,12 +5132,12 @@ void SDKHookCB_OnTakeDamagePost(
 			damage_type & DMG_BLAST != 0
 		) {
 			if (
-				(ItemIsEnabled(Wep_RocketJumper) &&
+				(ItemIsEnabled(Wep_RocketJumper, victim) &&
 				player_weapons[victim][Wep_RocketJumper] &&
 				damage_custom == TF_DMG_CUSTOM_TAUNTATK_GRENADE) ||
-				(GetItemVariant(Wep_RocketJumper) >= 1 &&
+				(GetItemVariant(Wep_RocketJumper, victim) >= 1 &&
 				player_weapons[victim][Wep_RocketJumper]) ||
-				(GetItemVariant(Wep_StickyJumper) >= 2 &&
+				(GetItemVariant(Wep_StickyJumper, victim) >= 2 &&
 				player_weapons[victim][Wep_StickyJumper])
 			) {
 				// Restore health after tanking self blast damage
@@ -5118,7 +5146,7 @@ void SDKHookCB_OnTakeDamagePost(
 		}
 
 		if (
-			GetItemVariant(Wep_SydneySleeper) == 0 &&
+			GetItemVariant(Wep_SydneySleeper, attacker) == 0 &&
 			players[attacker].sleeper_piss_frame == GetGameTickCount() &&
 			weapon > 0
 		) {
@@ -5137,7 +5165,7 @@ void SDKHookCB_OnTakeDamagePost(
 				GetEntityClassname(weapon, class, sizeof(class));
 
 				if (
-					ItemIsEnabled(Wep_Pomson) &&
+					ItemIsEnabled(Wep_Pomson, attacker) &&
 					StrEqual(class, "tf_weapon_drg_pomson") &&
 					PlayerIsInvulnerable(victim) == false &&
 					(players[attacker].drain_victim != victim ||
@@ -5214,7 +5242,7 @@ public Action OnPlayerRunCmd(
 		case TFClass_Scout:
 		{
 			if (
-				GetItemVariant(Wep_BabyFace) == 1 &&
+				GetItemVariant(Wep_BabyFace, client) == 1 &&
 				player_weapons[client][Wep_BabyFace]
 			) {
 				// Release Baby Face's Blaster boost reset on jump
@@ -5256,14 +5284,16 @@ Action Command_Menu(int client, int args) {
 		menu_main.ExitButton = true;
 		menu_main.SetTitle("%T", "REVERT_MENU_TITLE", client);
 
-		char localizedClassInfo[64], localizedInfo[64], localizedInfoToggle[64];
+		char localizedClassInfo[64], localizedInfo[64], localizedInfoToggle[64], localizedPick[64];
 		Format(localizedClassInfo, sizeof(localizedClassInfo), "%T", "REVERT_MENU_SHOW_CLASSINFO", client);
 		Format(localizedInfo, sizeof(localizedInfo), "%T", "REVERT_MENU_SHOW_ALL", client);
 		Format(localizedInfoToggle, sizeof(localizedInfoToggle), "%T", "REVERT_MENU_TOGGLE_LOADOUT_CHANGE", client);
+		Format(localizedPick, sizeof(localizedPick), "%T", "REVERT_MENU_PICK", client);
 
 		menu_main.AddItem("classinfo", localizedClassInfo);
 		menu_main.AddItem("info", localizedInfo);
 		menu_main.AddItem("infotoggle", localizedInfoToggle);
+		menu_main.AddItem("pick", localizedPick);
 
 		if (cvar_show_moonshot.BoolValue) {
 			char localizedMoonshotToggle[64];
@@ -5292,6 +5322,15 @@ Action Command_ClassInfo(int client, int args) {
 		ShowClassReverts(client);
 	}
 
+	return Plugin_Handled;
+}
+
+Action Command_Pick(int client, int args) {
+	if (client > 0) {
+		players[client].picked = false;
+		PickMenu(client);
+	}
+	
 	return Plugin_Handled;
 }
 
@@ -5350,7 +5389,7 @@ bool TraceFilter_CustomShortCircuit(int entity, int contentsmask, any data) {
 
 int GetFeignBuffsEnd(int client)
 {
-	int reduction_by_dmg_taken = GetItemVariant(Wep_DeadRinger) == 0 ? RoundFloat(players[client].damage_taken_during_feign * 1.1) : 0;
+	int reduction_by_dmg_taken = GetItemVariant(Wep_DeadRinger, client) == 0 ? RoundFloat(players[client].damage_taken_during_feign * 1.1) : 0;
 	return players[client].feign_ready_tick + RoundFloat(66 * 6.5) - reduction_by_dmg_taken;
 }
 
@@ -5390,6 +5429,26 @@ bool PlayerIsCritboosted(int client) {
 	return false;
 }
 */
+
+void PlayerRemoveEquipment(int client) {
+	int idx;
+	char class[64];
+
+	TF2_RemoveAllWeapons(client);
+
+	for (idx = (MaxClients + 1); idx < 2048; idx++) {
+		if (IsValidEntity(idx)) {
+			GetEntityClassname(idx, class, sizeof(class));
+
+			if (
+				StrContains(class, "tf_wearable") == 0 &&
+				GetEntPropEnt(idx, Prop_Send, "m_hOwnerEntity") == client
+			) {
+				TF2_RemoveWearable(client, idx);
+			}
+		}
+	}
+}
 
 float ValveRemapVal(float val, float a, float b, float c, float d) {
 	// https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/public/mathlib/mathlib.h#L648
@@ -5542,20 +5601,65 @@ void ItemFinalize() {
  * Check if an item is enabled.
  * 
  * @param wep_enum		Weapon enum.
- * @return				True if an item revert is enabled on the server, false otherwise.
+ * @param client		Entity index of the client.
+ * @return				True if an item revert is enabled on the server or picked by the client, false otherwise.
  */
-bool ItemIsEnabled(int wep_enum) {
-	return cvar_enable.BoolValue && items[wep_enum].cvar.IntValue >= 1;
+bool ItemIsEnabled(int wep_enum, int client = 0) {
+	return GetItemVariant(wep_enum, client) > -1;
 }
 
 /**
- * Get the item variant enabled on a server.
+ * Get the item variant enabled.
  * 
  * @param wep_enum		Weapon enum.
+ * @param client		Entity index of the client.
  * @return				The weapon variant.
  */
-int GetItemVariant(int wep_enum) {
-	return cvar_enable.BoolValue ? items[wep_enum].cvar.IntValue - 1 : -1;
+int GetItemVariant(int wep_enum, int client = 0) {
+	char class[32];
+	
+	if (client <= MaxClients) {
+		if (client > 0) {
+			return players[client].items_life[wep_enum];
+		} else {
+			return cvar_enable.BoolValue ? items[wep_enum].cvar.IntValue - 1 : -1;
+		}
+	} else {
+		if (IsValidEntity(client)) {
+			GetEntityClassname(client, class, sizeof(class));
+		} else {
+			strcopy(class, sizeof(class), "NULL");
+		}
+
+		LogError("ItemIsEnabled/GetItemVariant called for invalid client (item %s, index %d, class %s)", items[wep_enum].key, client, class);
+	}
+
+	return -1;
+}
+
+void ItemPlayerApply(int client) {
+	int idx;
+	int value;
+
+	for (idx = 0; idx < NUM_ITEMS; idx++) {
+		value = -1;
+
+		if (
+			cvar_enable.BoolValue &&
+			ItemIsEnabled(idx) &&
+				(
+					(items[idx].flags & ITEMFLAG_PICKABLE) == 0 ||
+					players[client].items_pick[idx] == true
+				)
+		) {
+			value = GetItemVariant(idx);
+		}
+
+		if (players[client].items_life[idx] != value) {
+			players[client].items_life[idx] = value;
+			players[client].change = true;
+		}
+	}
 }
 
 int MenuHandler_Main(Menu menu, MenuAction action, int param1, int param2) {
@@ -5575,6 +5679,10 @@ int MenuHandler_Main(Menu menu, MenuAction action, int param1, int param2) {
 			}
 			else if (StrEqual(info, "moonshottoggle")) {
 				ToggleMoonshotMessage(param1);
+			}
+			else if (StrEqual(info, "pick")) {
+				players[param1].picked = false;
+				PickMenu(param1);
 			}
 		}
 		case MenuAction_End: {
@@ -5632,6 +5740,94 @@ void RevertInfoMenu(int client, int selection = 0){
 	}
 
 	if (count) menu_info.DisplayAt(client, selection, MENU_TIME_FOREVER);
+}
+
+int MenuHandler_Pick(Menu menu, MenuAction action, int param1, int param2) {
+	int item;
+	bool item_enable;
+	char info[64];
+	char tmp[128];
+
+	if (action == MenuAction_End) {
+		delete menu;
+		return 0;
+	}
+	
+	if (
+		action == MenuAction_Select ||
+		action == MenuAction_DrawItem ||
+		action == MenuAction_DisplayItem
+	) {
+		GetMenuItem(menu, param2, info, sizeof(info));
+		
+		for (item = 0; item < NUM_ITEMS; item++) {
+			if (StrEqual(info, items[item].key))
+				break;
+		}
+		
+		if (item >= 0) {
+			item_enable = true;
+			
+			if (items[item].flags & ITEMFLAG_PICKABLE != 0) {
+				if (players[param1].items_pick[item] == false) {
+					item_enable = false;
+				}
+			}
+		}
+	}
+	
+	if (action == MenuAction_Select) {
+		if (item >= 0) {
+			players[param1].items_pick[item] = (players[param1].items_pick[item] == false);
+			players[param1].picked = true;
+		}
+		
+		PickMenu(param1, menu.Selection);
+	}
+	
+	if (action == MenuAction_Cancel) {
+		if (
+			IsClientInGame(param1) &&
+			players[param1].picked == true
+		) {
+			//ItemCookieSave(param1);
+			PrintToChat(param1, "[SM] %t", "REVERT_APPLY_CHANGES_NEXT_SPAWN");
+		}
+	}
+	
+	if (action == MenuAction_DisplayItem) {
+		if (item >= 0) {
+			
+			Format(tmp, sizeof(tmp), "%T%s", items[item].key, param1, (item_enable ? "" : " (OFF)"));
+			
+			return RedrawMenuItem(tmp);
+		}
+	}
+	return 0;
+}
+
+void PickMenu(int client, int selection = 0) {
+	if (!cvar_enable.BoolValue) return;
+	
+	Menu menu_pick = new Menu(MenuHandler_Pick, (MenuAction_Select|MenuAction_Cancel|MenuAction_DrawItem|MenuAction_DisplayItem));
+	menu_pick.SetTitle("%T", "REVERT_MENU_PICK_TITLE", client);
+	menu_pick.Pagination = 10;
+	menu_pick.ExitButton = true;
+
+	int count;
+	char item_name[64];
+	for (int idx = 0; idx < NUM_ITEMS; idx++) {
+		if (
+			ItemIsEnabled(idx) &&
+			(items[idx].flags & ITEMFLAG_PICKABLE) != 0
+		) {
+			Format(item_name,sizeof(item_name),"%T",items[idx].key,client);
+			menu_pick.AddItem(items[idx].key,item_name);
+			count++;
+		}
+	}
+
+	if (count) menu_pick.DisplayAt(client, selection, MENU_TIME_FOREVER);
 }
 
 void ShowItemsDetails(int client) {
@@ -5922,8 +6118,8 @@ MRESReturn DHookCallback_CTFWeaponBase_PrimaryAttack(int entity) {
 	char class[64];
 
 	if (
-		GetItemVariant(Wep_ShortCircuit) == 1 ||
-		GetItemVariant(Wep_ShortCircuit) == 2
+		GetItemVariant(Wep_ShortCircuit, owner) == 1 ||
+		GetItemVariant(Wep_ShortCircuit, owner) == 2
 	) {
 		GetEntityClassname(entity, class, sizeof(class));
 		owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
@@ -5933,7 +6129,7 @@ MRESReturn DHookCallback_CTFWeaponBase_PrimaryAttack(int entity) {
 		) {
 			// short circuit primary fire
 			// Base amount is 0 because we rely on the default primary fire metal consumption (5)
-			switch (GetItemVariant(Wep_ShortCircuit)) {
+			switch (GetItemVariant(Wep_ShortCircuit, owner)) {
 				case 1: {
 					DoShortCircuitProjectileRemoval(owner, entity, 0, 15);
 				}
@@ -5963,12 +6159,12 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 		) {
 			// airblast set type cvar
 
-			SetConVarMaybe(cvar_ref_tf_airblast_cray, "0", ItemIsEnabled(Feat_Airblast));
+			SetConVarMaybe(cvar_ref_tf_airblast_cray, "0", ItemIsEnabled(Feat_Airblast, owner));
 
 			return MRES_Ignored;
 		}
 		if (
-			GetItemVariant(Wep_ShortCircuit) == 0 &&
+			GetItemVariant(Wep_ShortCircuit, owner) == 0 &&
 			StrEqual(class, "tf_weapon_mechanical_arm")
 		) {
 			// short circuit secondary fire
@@ -5997,8 +6193,8 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 		}
 
 		if (
-			(GetItemVariant(Wep_ShortCircuit) == 1 ||
-			GetItemVariant(Wep_ShortCircuit) == 2) &&
+			(GetItemVariant(Wep_ShortCircuit, owner) == 1 ||
+			GetItemVariant(Wep_ShortCircuit, owner) == 2) &&
 			StrEqual(class, "tf_weapon_mechanical_arm")
 		) {
 			// prevent alt-fire for pre-gunmettle short circuit
@@ -6006,7 +6202,7 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack(int entity) {
 		}
 
 		if (
-			ItemIsEnabled(Wep_Shortstop) &&
+			ItemIsEnabled(Wep_Shortstop, owner) &&
 			cvar_enable_shortstop_shove.BoolValue == false &&
 			StrEqual(class, "tf_weapon_handgun_scout_primary")
 		) {
@@ -6148,7 +6344,7 @@ MRESReturn DHookCallback_CTFBaseRocket_GetRadius(int entity, DHookReturn returnV
 			GetEntityClassname(weapon, class, sizeof(class));
 
 			if (
-				ItemIsEnabled(Wep_Airstrike) &&
+				ItemIsEnabled(Wep_Airstrike, owner) &&
 				StrEqual(class, "tf_weapon_rocketlauncher_airstrike") &&
 				IsPlayerAlive(owner) &&
 				TF2_IsPlayerInCondition(owner, TFCond_BlastJumping)
@@ -6172,8 +6368,8 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed(int entity, DHookReturn ret
 		if (TF2_GetPlayerClass(entity) == TFClass_Scout) {
 			float multiplier = 1.0;
 			if (
-				ItemIsEnabled(Wep_CritCola) &&
-				GetItemVariant(Wep_CritCola) != 4 &&
+				ItemIsEnabled(Wep_CritCola, entity) &&
+				GetItemVariant(Wep_CritCola, entity) != 4 &&
 				TF2_IsPlayerInCondition(entity, TFCond_CritCola) &&
 				player_weapons[entity][Wep_CritCola]
 			) {
@@ -6182,7 +6378,7 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed(int entity, DHookReturn ret
 			}
 
 			if (
-				GetItemVariant(Wep_BabyFace) == 1 &&
+				GetItemVariant(Wep_BabyFace, entity) == 1 &&
 				player_weapons[entity][Wep_BabyFace]
 			) {
 				// Release Baby Face's Blaster proper speed application.
@@ -6199,7 +6395,7 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed(int entity, DHookReturn ret
 		}
 
 		if (
-			ItemIsEnabled(Wep_BuffaloSteak) &&
+			ItemIsEnabled(Wep_BuffaloSteak, entity) &&
 			TF2_IsPlayerInCondition(entity, TFCond_CritCola) &&
 			TF2_GetPlayerClass(entity) == TFClass_Heavy &&
 			player_weapons[entity][Wep_BuffaloSteak]
@@ -6216,24 +6412,24 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed(int entity, DHookReturn ret
 				// Release steak + GRU move speed stacking imitation code
 				// resulting speed should be 403.65 HU/s since old GRU + Buffalo Steak speed stack was 403.65 HU/s (230*1.30*1.35)
 				// note: whip speedboost doesn't stack with old steak + GRU speed stacking. the same behavior also exists for vanilla steak + GRU.
-				if(GetItemVariant(Wep_BuffaloSteak) == 1 && (index == 239 || index == 1084 || index == 1100)) {				
+				if(GetItemVariant(Wep_BuffaloSteak, entity) == 1 && (index == 239 || index == 1084 || index == 1100)) {				
 					returnValue.Value = view_as<float>(returnValue.Value) * 1.30; 
 					// it rounds to 403.50 HU/s for some reason via cl_showpos 1, i gave up trying to get it to the exact value but this should be good enough
 					// technically 403.50 HU/s isn't historically accurate, but i have no idea why i can't get it to 403.65 HU/s despite setting it to exactly that value before
 					return MRES_Override;	
 				}
 
-				if (!(index == 239 || index == 1084 || index == 1100 || (index == 426 && GetItemVariant(Wep_Eviction) == 0)))
+				if (!(index == 239 || index == 1084 || index == 1100 || (index == 426 && GetItemVariant(Wep_Eviction, entity) == 0)))
 				{
 					// Change the speed to 310.5 HU/s when Buffalo Steak Sandvich is used.
 					// Note: The speedboost for the Eviction Notice gets capped at 310.5 HU/s whenever the reverted Steak buff is in effect. This happpens too with Vanilla.	
 					// initial returnValue.Value = ~299 HU/s
-					if ((index == 426) && (GetItemVariant(Wep_Eviction) == 1) && TF2_IsPlayerInCondition(entity, TFCond_SpeedBuffAlly)) {
+					if ((index == 426) && (GetItemVariant(Wep_Eviction, entity) == 1) && TF2_IsPlayerInCondition(entity, TFCond_SpeedBuffAlly)) {
 						// Cap speed to 310.5 HU/s when speedboost on hit is active while under reverted Steak buff for the Gun Mettle variant of the Eviction Notice
 						returnValue.Value = view_as<float>(returnValue.Value) * 1.00;
 						return MRES_Override;
 					}
-					else if ((index == 426) && (GetItemVariant(Wep_Eviction) == -1)) {
+					else if ((index == 426) && (GetItemVariant(Wep_Eviction, entity) == -1)) {
 						// Cap speed to 310.5 HU/s while under reverted Steak buff when using the vanilla Eviction Notice
 						returnValue.Value = view_as<float>(returnValue.Value) * 1.00;
 						return MRES_Override;
@@ -6256,7 +6452,7 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise(int entity, DHookReturn returnVal
 		TF2_GetPlayerClass(entity) == TFClass_Spy &&
 		(GetGameTime() - players[entity].backstab_time) > 0.0 &&
 		(GetGameTime() - players[entity].backstab_time) < 0.5 &&
-		ItemIsEnabled(Wep_EternalReward)
+		ItemIsEnabled(Wep_EternalReward, entity)
 	) {
 		// CanDisguise() is being called from the eternal reward's DisguiseOnKill()
 		// so we have to overwrite the result, otherwise the "cannot disguise" attrib will block it
@@ -6318,7 +6514,7 @@ MRESReturn DHookCallback_CAmmoPack_MyTouch(int entity, DHookReturn returnValue, 
 	) {
 		int pack_size = SDKCall(sdkcall_CAmmoPack_GetPowerupSize, entity);
 		if (
-			ItemIsEnabled(Wep_Persian) &&
+			ItemIsEnabled(Wep_Persian, client) &&
 			TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
 		) {
 			// Health pickup with the Persian Persuader.
@@ -6347,7 +6543,7 @@ MRESReturn DHookCallback_CAmmoPack_MyTouch(int entity, DHookReturn returnValue, 
 			return MRES_Supercede;
 		}
 		if (
-			GetItemVariant(Wep_DeadRinger) == 0 &&
+			GetItemVariant(Wep_DeadRinger, client) == 0 &&
 			GetEntPropFloat(client, Prop_Send, "m_flCloakMeter") < 100.0
 		) {
 			int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Building);
@@ -6376,7 +6572,7 @@ MRESReturn DHookCallback_CTFAmmoPack_PackTouch(int entity, DHookParam parameters
 		client <= MaxClients
 	) {
 		if (
-			ItemIsEnabled(Wep_Persian) &&
+			ItemIsEnabled(Wep_Persian, client) &&
 			TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
 		) {
 			// Health pickup with the Persian Persuader from dropped ammo packs.
@@ -6404,7 +6600,7 @@ MRESReturn DHookCallback_CTFAmmoPack_PackTouch(int entity, DHookParam parameters
 			return MRES_Supercede;
 		}
 		if (
-			GetItemVariant(Wep_DeadRinger) == 0 &&
+			GetItemVariant(Wep_DeadRinger, client) == 0 &&
 			GetEntPropFloat(client, Prop_Send, "m_flCloakMeter") < 100.0
 		) {
 			int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Building);
@@ -6435,7 +6631,7 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Pre(int arrowE
 	}
 #endif
 
-	if (ItemIsEnabled(Wep_RescueRanger)) {
+	if (ItemIsEnabled(Wep_RescueRanger, engineerIndex)) {
 		int weapon;
 		char class[64];
 		// Grab weapon.
@@ -6481,7 +6677,7 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Post(int arrow
 	}
 #endif
 
-	if (ItemIsEnabled(Wep_RescueRanger)) {
+	if (ItemIsEnabled(Wep_RescueRanger, engineerIndex)) {
 		int weapon;
 		char class[64];
 
@@ -6543,7 +6739,7 @@ MRESReturn DHookCallback_CTFAmmoPack_MakeHolidayPack(int pThis) {
 
 MRESReturn DHookCallback_CTFPlayer_AddToSpyKnife(int entity, DHookReturn returnValue, DHookParam parameters)
 {
-	if (ItemIsEnabled(Wep_Spycicle))
+	if (ItemIsEnabled(Wep_Spycicle, entity))
 	{
 		// Prevent ammo pick-up with the spycicle when cloak meter AND ammo are full.
 		returnValue.Value = false;
@@ -6572,7 +6768,7 @@ MRESReturn DHookCallback_CTFPlayer_RegenThink(int client)
 		weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
 
 		if (
-			ItemIsEnabled(Wep_Concheror) &&
+			ItemIsEnabled(Wep_Concheror, client) &&
 			weapon > 0
 		) {
 			if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 354) {
@@ -6585,7 +6781,7 @@ MRESReturn DHookCallback_CTFPlayer_RegenThink(int client)
 		weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 		
 		if (
-			ItemIsEnabled(Wep_Amputator) &&
+			ItemIsEnabled(Wep_Amputator, client) &&
 			weapon > 0
 		) {
 			if (GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 304) {
@@ -6627,7 +6823,7 @@ MRESReturn DHookCallback_CObjectDispenser_DispenseAmmo(int entity, DHookReturn r
 		client <= MaxClients
 	) {
 		if (
-			ItemIsEnabled(Wep_Persian) &&
+			ItemIsEnabled(Wep_Persian, client) &&
 			TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
 		) {
 			// Prevent ammo pick-up from Dispensers with Persian Persuader equipped.
@@ -6809,18 +7005,6 @@ int abs(int x)
 {
 	int mask = x >> 31;
 	return (x + mask) ^ mask;
-}
-
-/**
- * Get the lesser integer between two integers.
- * 
- * @param x		Integer x.
- * @param y		Integer y.
- * @return		The lesser integer between x and y.
- */
-int intMin(int x, int y)
-{
-	return x > y ? y : x;
 }
 
 /**
