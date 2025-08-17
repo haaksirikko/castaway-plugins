@@ -111,6 +111,22 @@
 	{
 		"en"	"Toggle loadout change revert info"
 	}
+	"REVERT_MENU_PICK"
+	{
+		"en"	"Pick which reverts you want to use"
+	}
+	"REVERT_MENU_PICK_TITLE"
+	{
+		"en"	"Reverts Picker"
+	}
+	"REVERT_APPLY_CHANGES_NEXT_SPAWN"
+	{
+		"en"	"Changes will be applied on next spawn"
+	}
+	"REVERT_APPLY_CHANGES"
+	{
+		"en"	"Revert changes have been applied"
+	}
 	"REVERT_MENU_TOGGLE_MOONSHOT"
 	{
 		"en"	"Toggle moonshot message"
