@@ -170,7 +170,7 @@ char class_names[][] = {
 
 enum struct Item {
 	char key[64];
-	int flags;
+	int flags[MAX_VARIANTS+1];
 	int num_variants;
 	ConVar cvar;
 	bool mem_patch;
@@ -528,14 +528,14 @@ public void OnPluginStart() {
 	ItemDefine("atomizer", "Atomizer_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Atomizer);
 	ItemVariant(Wep_Atomizer, "Atomizer_PreBM");
 	ItemDefine("axtinguish", "Axtinguisher_PreLW", CLASSFLAG_PYRO | ITEMFLAG_PICKABLE, Wep_Axtinguisher);
-	ItemVariant(Wep_Axtinguisher, "Axtinguisher_PreTB");
-	ItemVariant(Wep_Axtinguisher, "Axtinguisher_PreBM");
+	ItemVariant(Wep_Axtinguisher, "Axtinguisher_PreTB", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_Axtinguisher, "Axtinguisher_PreBM", ITEMFLAG_PICKABLE);
 	ItemDefine("backburner", "Backburner_PreHat", CLASSFLAG_PYRO, Wep_Backburner);
-	ItemVariant(Wep_Backburner, "Backburner_119");
-	ItemVariant(Wep_Backburner, "Backburner_Release");
+	ItemVariant(Wep_Backburner, "Backburner_119", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_Backburner, "Backburner_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("basejump", "BaseJumper_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_BaseJumper);
 	ItemDefine("babyface", "BabyFace_PreGM", CLASSFLAG_SCOUT, Wep_BabyFace);
-	ItemVariant(Wep_BabyFace, "BabyFace_Release");
+	ItemVariant(Wep_BabyFace, "BabyFace_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("beggars", "Beggars_Pre2013", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_Beggars);
 	ItemVariant(Wep_Beggars, "Beggars_PreTB");
 	ItemDefine("blackbox", "BlackBox_PreGM", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_BlackBox);
@@ -545,15 +545,15 @@ public void OnPluginStart() {
 	ItemDefine("bushwacka", "Bushwacka_PreLW", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_Bushwacka);
 	ItemVariant(Wep_Bushwacka, "Bushwacka_PreGM");
 	ItemDefine("buffalosteak", "BuffaloSteak_PreMYM", CLASSFLAG_HEAVY, Wep_BuffaloSteak);
-	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Release");
-	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Pre2013");
+	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Release", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Pre2013", ITEMFLAG_PICKABLE);
 	ItemDefine("targe", "Targe_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_CharginTarge);
 	ItemDefine("claidheamh", "Claidheamh_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Claidheamh);
 	ItemDefine("carbine", "Carbine_Release", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_CleanerCarbine);
-	ItemVariant(Wep_CleanerCarbine, "Carbine_PreTB");
+	ItemVariant(Wep_CleanerCarbine, "Carbine_PreTB", ITEMFLAG_PICKABLE);
 	ItemDefine("concheror", "Concheror_PreTB", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_Concheror);
 	ItemDefine("cowmangler", "CowMangler_Release", CLASSFLAG_SOLDIER | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Wep_CowMangler);
-	ItemVariant(Wep_CowMangler, "CowMangler_Pre2013");
+	ItemVariant(Wep_CowMangler, "CowMangler_Pre2013", ITEMFLAG_PICKABLE);
 #if defined MEMORY_PATCHES
 	ItemDefine("cozycamper", "CozyCamper_PreMYM", CLASSFLAG_SNIPER, Wep_CozyCamper, true);
 #endif
@@ -561,17 +561,17 @@ public void OnPluginStart() {
 	ItemVariant(Wep_CritCola, "CritCola_PreJI");
 	ItemVariant(Wep_CritCola, "CritCola_PreDec2013");
 	ItemVariant(Wep_CritCola, "CritCola_PreJuly2013");
-	ItemVariant(Wep_CritCola, "CritCola_Release");
+	ItemVariant(Wep_CritCola, "CritCola_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("crocostyle", "CrocoStyle_Release", CLASSFLAG_SNIPER | ITEMFLAG_DISABLED, Set_CrocoStyle);
 #if defined MEMORY_PATCHES
 	ItemDefine("dalokohsbar", "DalokohsBar_PreMYM", CLASSFLAG_HEAVY, Wep_Dalokohs, true);
 #endif
 	ItemDefine("darwin", "Darwin_Pre2013", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_Darwin);
-	ItemVariant(Wep_Darwin, "Darwin_PreJI");
+	ItemVariant(Wep_Darwin, "Darwin_PreJI", ITEMFLAG_PICKABLE);
 	ItemDefine("ringer", "Ringer_PreGM", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_DeadRinger);
 	ItemVariant(Wep_DeadRinger, "Ringer_PreJI");
-	ItemVariant(Wep_DeadRinger, "Ringer_PreTB");
-	ItemVariant(Wep_DeadRinger, "Ringer_PostRelease");
+	ItemVariant(Wep_DeadRinger, "Ringer_PreTB", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_DeadRinger, "Ringer_PostRelease", ITEMFLAG_PICKABLE);
 	ItemDefine("degreaser", "Degreaser_PreTB", CLASSFLAG_PYRO, Wep_Degreaser);
 #if defined MEMORY_PATCHES
 	ItemDefine("disciplinary", "Disciplinary_PreMYM", CLASSFLAG_SOLDIER, Wep_Disciplinary, true);
@@ -582,10 +582,10 @@ public void OnPluginStart() {
 	ItemDefine("dragonfury", "DragonFury_Release_Patchless", CLASSFLAG_PYRO, Wep_DragonFury);
 #endif
 	ItemDefine("enforcer", "Enforcer_PreGM", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_Enforcer);
-	ItemVariant(Wep_Enforcer, "Enforcer_Release");
+	ItemVariant(Wep_Enforcer, "Enforcer_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("equalizer", "Equalizer_PrePyro", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_Pickaxe);
-	ItemVariant(Wep_Pickaxe, "Equalizer_PreHat");
-	ItemVariant(Wep_Pickaxe, "Equalizer_Release");
+	ItemVariant(Wep_Pickaxe, "Equalizer_PreHat", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_Pickaxe, "Equalizer_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("eureka", "Eureka_SpawnRefill", CLASSFLAG_ENGINEER, Wep_EurekaEffect);
 	ItemDefine("eviction", "Eviction_PreJI", CLASSFLAG_HEAVY, Wep_Eviction);
 	ItemVariant(Wep_Eviction, "Eviction_PreMYM");
@@ -596,8 +596,8 @@ public void OnPluginStart() {
 	ItemDefine("guillotine", "Guillotine_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Cleaver);
 	ItemDefine("gasjockey", "GasJockey_Release", CLASSFLAG_PYRO | ITEMFLAG_DISABLED, Set_GasJockey);
 	ItemDefine("glovesru", "GlovesRU_PreTB", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_GRU);
-	ItemVariant(Wep_GRU, "GlovesRU_PreJI");
-	ItemVariant(Wep_GRU, "GlovesRU_PrePyro");
+	ItemVariant(Wep_GRU, "GlovesRU_PreJI", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_GRU, "GlovesRU_PrePyro", ITEMFLAG_PICKABLE);
 	ItemDefine("gunboats", "Gunboats_Release", CLASSFLAG_SOLDIER, Wep_Gunboats);
 #if defined MEMORY_PATCHES
 	ItemDefine("gunslinger", "Gunslinger_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_Gunslinger);
@@ -609,29 +609,29 @@ public void OnPluginStart() {
 	ItemDefine("ironbomber", "IronBomber_Pre2022", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Wep_IronBomber, true);
 #endif
 	ItemDefine("jag", "Jag_PreTB", CLASSFLAG_ENGINEER, Wep_Jag);
-	ItemVariant(Wep_Jag, "Jag_PreGM");  
+	ItemVariant(Wep_Jag, "Jag_PreGM", ITEMFLAG_PICKABLE);  
 	ItemDefine("liberty", "Liberty_Release", CLASSFLAG_SOLDIER | ITEMFLAG_PICKABLE, Wep_LibertyLauncher);
 	ItemDefine("lochload", "LochLoad_PreGM", CLASSFLAG_DEMOMAN, Wep_LochLoad);
-	ItemVariant(Wep_LochLoad, "LochLoad_2013");
+	ItemVariant(Wep_LochLoad, "LochLoad_2013", ITEMFLAG_PICKABLE);
 	ItemDefine("cannon", "Cannon_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_LooseCannon);
 #if defined MEMORY_PATCHES
 	ItemDefine("madmilk", "MadMilk_Release", CLASSFLAG_SCOUT, Wep_MadMilk, true);
 #endif
 	ItemDefine("gardener", "Gardener_PreTB", CLASSFLAG_SOLDIER, Wep_MarketGardener);
 	ItemDefine("natascha", "Natascha_PreMYM", CLASSFLAG_HEAVY, Wep_Natascha);
-	ItemVariant(Wep_Natascha, "Natascha_PreGM");
+	ItemVariant(Wep_Natascha, "Natascha_PreGM", ITEMFLAG_PICKABLE);
 	ItemDefine("panic", "Panic_PreJI", CLASSFLAG_SOLDIER | CLASSFLAG_PYRO | CLASSFLAG_HEAVY | CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_PanicAttack);
 	ItemDefine("persuader", "Persuader_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Persian);
 	ItemDefine("phlog", "Phlog_Pyro", CLASSFLAG_PYRO | ITEMFLAG_PICKABLE, Wep_Phlogistinator);
 	ItemVariant(Wep_Phlogistinator, "Phlog_TB");
-	ItemVariant(Wep_Phlogistinator, "Phlog_Release");
-	ItemVariant(Wep_Phlogistinator, "Phlog_March2012");
+	ItemVariant(Wep_Phlogistinator, "Phlog_Release", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_Phlogistinator, "Phlog_March2012", ITEMFLAG_PICKABLE);
 	ItemDefine("pomson", "Pomson_PreGM", CLASSFLAG_ENGINEER, Wep_Pomson);
 	ItemVariant(Wep_Pomson, "Pomson_Release");
 	ItemVariant(Wep_Pomson, "Pomson_PreGM_Historical");
 	ItemDefine("powerjack", "Powerjack_PreGM", CLASSFLAG_PYRO, Wep_Powerjack);
-	ItemVariant(Wep_Powerjack, "Powerjack_Release");
-	ItemVariant(Wep_Powerjack, "Powerjack_Pre2013");	
+	ItemVariant(Wep_Powerjack, "Powerjack_Release", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_Powerjack, "Powerjack_Pre2013", ITEMFLAG_PICKABLE);
 	ItemDefine("pocket", "Pocket_Release", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_PocketPistol);
 	ItemVariant(Wep_PocketPistol, "Pocket_PreBM");
 #if defined MEMORY_PATCHES
@@ -652,36 +652,36 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Bison, "Bison_PreTB");
 	ItemDefine("rocketjmp", "RocketJmp_Pre2013", CLASSFLAG_SOLDIER, Wep_RocketJumper);
 	ItemVariant(Wep_RocketJumper, "RocketJmp_Release");
-	ItemVariant(Wep_RocketJumper, "RocketJmp_Pre2011");
-	ItemVariant(Wep_RocketJumper, "RocketJmp_Oct2010");
+	ItemVariant(Wep_RocketJumper, "RocketJmp_Pre2011", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_RocketJumper, "RocketJmp_Oct2010", ITEMFLAG_PICKABLE);
 	ItemDefine("saharan", "Saharan_Release", CLASSFLAG_SPY | ITEMFLAG_DISABLED, Set_Saharan);
 	ItemVariant(Set_Saharan, "Saharan_ExtraCloak");
 	ItemDefine("sandman", "Sandman_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Sandman);
-	ItemVariant(Wep_Sandman, "Sandman_PreWAR");
+	ItemVariant(Wep_Sandman, "Sandman_PreWAR", ITEMFLAG_PICKABLE);
 	ItemDefine("scottish", "Scottish_Release", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Wep_Scottish);
 	ItemDefine("circuit", "Circuit_PreMYM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_ShortCircuit);
-	ItemVariant(Wep_ShortCircuit, "Circuit_PreGM");
-	ItemVariant(Wep_ShortCircuit, "Circuit_Dec2013");
+	ItemVariant(Wep_ShortCircuit, "Circuit_PreGM", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_ShortCircuit, "Circuit_Dec2013", ITEMFLAG_PICKABLE);
 	ItemDefine("shortstop", "Shortstop_PreMnvy", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Shortstop);
-	ItemVariant(Wep_Shortstop, "Shortstop_PreGM");
-	ItemVariant(Wep_Shortstop, "Shortstop_Release");
+	ItemVariant(Wep_Shortstop, "Shortstop_PreGM", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_Shortstop, "Shortstop_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("sodapop", "Sodapop_Pre2013", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_SodaPopper);
-	ItemVariant(Wep_SodaPopper, "Sodapop_PreMYM");
+	ItemVariant(Wep_SodaPopper, "Sodapop_PreMYM", ITEMFLAG_PICKABLE);
 	ItemDefine("solemn", "Solemn_PreGM", CLASSFLAG_MEDIC, Wep_Solemn);
 	ItemDefine("spdelivery", "SpDelivery_Release", CLASSFLAG_SCOUT | ITEMFLAG_DISABLED, Set_SpDelivery);
 	ItemDefine("splendid", "Splendid_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_SplendidScreen);
-	ItemVariant(Wep_SplendidScreen, "Splendid_Release");
+	ItemVariant(Wep_SplendidScreen, "Splendid_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("spycicle", "SpyCicle_PreGM", CLASSFLAG_SPY | ITEMFLAG_PICKABLE, Wep_Spycicle);
 	ItemDefine("stkjumper", "StkJumper_Pre2013", CLASSFLAG_DEMOMAN, Wep_StickyJumper);
 	ItemVariant(Wep_StickyJumper, "StkJumper_Pre2013_Intel");
-	ItemVariant(Wep_StickyJumper, "StkJumper_Pre2011");
-	ItemVariant(Wep_StickyJumper, "StkJumper_ReleaseDay2");
+	ItemVariant(Wep_StickyJumper, "StkJumper_Pre2011", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_StickyJumper, "StkJumper_ReleaseDay2", ITEMFLAG_PICKABLE);
 	ItemDefine("sleeper", "Sleeper_PreBM", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_SydneySleeper);
-	ItemVariant(Wep_SydneySleeper, "Sleeper_PreGM");
-	ItemVariant(Wep_SydneySleeper, "Sleeper_Release");	
+	ItemVariant(Wep_SydneySleeper, "Sleeper_PreGM", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_SydneySleeper, "Sleeper_Release", ITEMFLAG_PICKABLE);	
 	ItemDefine("turner", "Turner_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_TideTurner);
 	ItemDefine("tomislav", "Tomislav_PrePyro", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_Tomislav);
-	ItemVariant(Wep_Tomislav, "Tomislav_Release");
+	ItemVariant(Wep_Tomislav, "Tomislav_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("tribalshiv", "TribalShiv_Release", CLASSFLAG_SNIPER, Wep_TribalmansShiv);
 	ItemDefine("caber", "Caber_PreGM", CLASSFLAG_DEMOMAN, Wep_Caber);
 	ItemDefine("vitasaw", "VitaSaw_PreJI", CLASSFLAG_MEDIC | ITEMFLAG_PICKABLE, Wep_VitaSaw);
@@ -5539,14 +5539,14 @@ void ParticleShow(char[] name, float origin[3], float start[3], float angles[3])
  * @param key				Key for item used for the cvar and as the item name key in
  * 							the translation file.
  * @param desc				Key for description of the item in the translation file.
- * @param flags				Class flags.
+ * @param flags				Class and item flags.
  * @param wep_enum			Weapon enum, this identifies a weapon.
  * @param mem_patch			This revert requires a memory patch?
  */
 void ItemDefine(const char[] key, const char[] desc, int flags, int wep_enum, bool mem_patch=false) {
 	strcopy(items[wep_enum].key, sizeof(items[].key), key);
 	strcopy(items_desc[wep_enum][0], sizeof(items_desc[][]), desc);
-	items[wep_enum].flags = flags;
+	items[wep_enum].flags[0] = flags;
 	items[wep_enum].num_variants = 0;
 	items[wep_enum].mem_patch = mem_patch;
 }
@@ -5556,8 +5556,9 @@ void ItemDefine(const char[] key, const char[] desc, int flags, int wep_enum, bo
  * 
  * @param wep_enum		Weapon enum.
  * @param desc			Key for description of the item variant in the translation file.
+ * @param flags			Item flags.
  */
-void ItemVariant(int wep_enum, const char[] desc) {
+void ItemVariant(int wep_enum, const char[] desc, int flags = 0) {
 	int variant_idx = ++items[wep_enum].num_variants;
 
 	if (items[wep_enum].num_variants > MAX_VARIANTS) {
@@ -5565,6 +5566,7 @@ void ItemVariant(int wep_enum, const char[] desc) {
 	}
 
 	strcopy(items_desc[wep_enum][variant_idx], sizeof(items_desc[][]), desc);
+	items[wep_enum].flags[variant_idx] = flags;
 }
 
 void ItemFinalize() {
@@ -5640,19 +5642,22 @@ int GetItemVariant(int wep_enum, int client = 0) {
 void ItemPlayerApply(int client) {
 	int idx;
 	int value;
+	int variant_idx;
 
 	for (idx = 0; idx < NUM_ITEMS; idx++) {
 		value = -1;
+		variant_idx = GetItemVariant(idx);
 
 		if (
 			cvar_enable.BoolValue &&
-			ItemIsEnabled(idx) &&
-				(
-					(items[idx].flags & ITEMFLAG_PICKABLE) == 0 ||
-					players[client].items_pick[idx] == true
-				)
+			variant_idx > -1
 		) {
-			value = GetItemVariant(idx);
+			if (
+				(items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE) == 0 ||
+				players[client].items_pick[idx] == true
+			) {
+				value = variant_idx;
+			}
 		}
 
 		if (players[client].items_life[idx] != value) {
@@ -5764,11 +5769,12 @@ int MenuHandler_Pick(Menu menu, MenuAction action, int param1, int param2) {
 			if (StrEqual(info, items[item].key))
 				break;
 		}
-		
-		if (item >= 0) {
-			item_enable = true;
-			
-			if (items[item].flags & ITEMFLAG_PICKABLE != 0) {
+
+		item_enable = true;
+
+		int variant_idx = GetItemVariant(item);
+		if (variant_idx > -1) {
+			if (items[item].flags[variant_idx] & ITEMFLAG_PICKABLE != 0) {
 				if (players[param1].items_pick[item] == false) {
 					item_enable = false;
 				}
@@ -5777,10 +5783,8 @@ int MenuHandler_Pick(Menu menu, MenuAction action, int param1, int param2) {
 	}
 	
 	if (action == MenuAction_Select) {
-		if (item >= 0) {
-			players[param1].items_pick[item] = (players[param1].items_pick[item] == false);
-			players[param1].picked = true;
-		}
+		players[param1].items_pick[item] = (players[param1].items_pick[item] == false);
+		players[param1].picked = true;
 		
 		PickMenu(param1, menu.Selection);
 	}
@@ -5796,12 +5800,8 @@ int MenuHandler_Pick(Menu menu, MenuAction action, int param1, int param2) {
 	}
 	
 	if (action == MenuAction_DisplayItem) {
-		if (item >= 0) {
-			
-			Format(tmp, sizeof(tmp), "%T%s", items[item].key, param1, (item_enable ? "" : " (OFF)"));
-			
-			return RedrawMenuItem(tmp);
-		}
+		Format(tmp, sizeof(tmp), "%T%s", items[item].key, param1, (item_enable ? "" : " (OFF)"));
+		return RedrawMenuItem(tmp);
 	}
 	return 0;
 }
@@ -5816,14 +5816,15 @@ void PickMenu(int client, int selection = 0) {
 
 	int count;
 	char item_name[64];
+	int variant_idx;
 	for (int idx = 0; idx < NUM_ITEMS; idx++) {
-		if (
-			ItemIsEnabled(idx) &&
-			(items[idx].flags & ITEMFLAG_PICKABLE) != 0
-		) {
-			Format(item_name,sizeof(item_name),"%T",items[idx].key,client);
-			menu_pick.AddItem(items[idx].key,item_name);
-			count++;
+		variant_idx = GetItemVariant(idx);
+		if (variant_idx > -1) {
+			if (items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE != 0) {
+				Format(item_name,sizeof(item_name),"%T",items[idx].key,client);
+				menu_pick.AddItem(items[idx].key,item_name);
+				count++;
+			}
 		}
 	}
 
@@ -5897,7 +5898,7 @@ void ShowClassReverts(int client) {
 			if (ItemIsEnabled(idx)) {
 				variant_idx = GetItemVariant(idx);
 				if (variant_idx > -1) {
-					if (items[idx].flags & (1 << class_idx) == 0)
+					if (items[idx].flags[0] & (1 << class_idx) == 0)
 						continue;
 					Format(msg[count], sizeof(msg[]), "{gold}%T {lightgreen}- %T", items[idx].key, client, items_desc[idx][variant_idx], client);
 					count++;
