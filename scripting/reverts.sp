@@ -5596,7 +5596,7 @@ void ItemFinalize() {
 			StrCat(cvar_desc, sizeof(cvar_desc), item_desc);
 		}
 
-		items[idx].cvar = CreateConVar(cvar_name, items[idx].flags & ITEMFLAG_DISABLED == 0 ? "1" : "0", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, float(items[idx].num_variants + 1));
+		items[idx].cvar = CreateConVar(cvar_name, items[idx].flags[0] & ITEMFLAG_DISABLED == 0 ? "1" : "0", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, float(items[idx].num_variants + 1));
 #if defined MEMORY_PATCHES
 		if (items[idx].mem_patch) {
 			items[idx].cvar.AddChangeHook(OnServerCvarChanged);
