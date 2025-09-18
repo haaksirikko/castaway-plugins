@@ -244,6 +244,7 @@ ConVar cvar_dropped_weapon_enable;
 #endif
 ConVar cvar_pre_toughbreak_switch;
 ConVar cvar_enable_shortstop_shove;
+ConVar cvar_enable_pickable_reverts;
 ConVar cvar_ref_tf_airblast_cray;
 ConVar cvar_ref_tf_bison_tick_time;
 ConVar cvar_ref_tf_dropped_weapon_lifetime;
@@ -503,6 +504,7 @@ public void OnPluginStart() {
 	cvar_no_reverts_info_by_default = CreateConVar("sm_reverts__no_reverts_info_on_spawn", "0", (PLUGIN_NAME ... " - Disable loadout change reverts info by default"), _, true, 0.0, true, 1.0);
 	cvar_pre_toughbreak_switch = CreateConVar("sm_reverts__pre_toughbreak_switch", "0", (PLUGIN_NAME ... " - Use pre-toughbreak weapon switch time (0.67 sec instead of 0.5 sec)"), _, true, 0.0, true, 1.0);
 	cvar_enable_shortstop_shove = CreateConVar("sm_reverts__enable_shortstop_shove", "0", (PLUGIN_NAME ... " - Enable alt-fire shove for reverted Shortstop"), _, true, 0.0, true, 1.0);
+	cvar_enable_pickable_reverts = CreateConVar("sm_reverts__enable_pickable_reverts", "1", (PLUGIN_NAME ... " - Allow select reverts to be chosen by the player"), _, true, 0.0, true, 1.0);
 
 #if defined MEMORY_PATCHES
 	cvar_dropped_weapon_enable.AddChangeHook(OnDroppedWeaponCvarChange);
@@ -5284,16 +5286,20 @@ Action Command_Menu(int client, int args) {
 		menu_main.ExitButton = true;
 		menu_main.SetTitle("%T", "REVERT_MENU_TITLE", client);
 
-		char localizedClassInfo[64], localizedInfo[64], localizedInfoToggle[64], localizedPick[64];
+		char localizedClassInfo[64], localizedInfo[64], localizedInfoToggle[64];
 		Format(localizedClassInfo, sizeof(localizedClassInfo), "%T", "REVERT_MENU_SHOW_CLASSINFO", client);
 		Format(localizedInfo, sizeof(localizedInfo), "%T", "REVERT_MENU_SHOW_ALL", client);
 		Format(localizedInfoToggle, sizeof(localizedInfoToggle), "%T", "REVERT_MENU_TOGGLE_LOADOUT_CHANGE", client);
-		Format(localizedPick, sizeof(localizedPick), "%T", "REVERT_MENU_PICK", client);
 
 		menu_main.AddItem("classinfo", localizedClassInfo);
 		menu_main.AddItem("info", localizedInfo);
 		menu_main.AddItem("infotoggle", localizedInfoToggle);
-		menu_main.AddItem("pick", localizedPick);
+
+		if (cvar_enable_pickable_reverts.BoolValue) {
+			char localizedPick[64];
+			Format(localizedPick, sizeof(localizedPick), "%T", "REVERT_MENU_PICK", client);
+			menu_main.AddItem("pick", localizedPick);
+		}
 
 		if (cvar_show_moonshot.BoolValue) {
 			char localizedMoonshotToggle[64];
@@ -5498,7 +5504,7 @@ void ParticleShowSimple(const char[] name, float position[3]) {
 	}
 }
 
-void ParticleShow(char[] name, float origin[3], float start[3], float angles[3]) {
+void ParticleShow(const char[] name, float origin[3], float start[3], float angles[3]) {
 	int idx;
 	int table;
 	int strings;
@@ -5653,6 +5659,7 @@ void ItemPlayerApply(int client) {
 			variant_idx > -1
 		) {
 			if (
+				!cvar_enable_pickable_reverts.BoolValue ||
 				(items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE) == 0 ||
 				players[client].items_pick[idx] == true
 			) {
