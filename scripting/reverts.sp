@@ -168,6 +168,7 @@ enum struct Item {
 	int flags[MAX_VARIANTS+1];
 	int num_variants;
 	ConVar cvar;
+	ConVar cvar_pick;
 	bool mem_patch;
 }
 
@@ -5403,7 +5404,28 @@ void ItemFinalize() {
 			StrCat(cvar_desc, sizeof(cvar_desc), item_desc);
 		}
 
-		items[idx].cvar = CreateConVar(cvar_name, items[idx].flags[0] & ITEMFLAG_DISABLED == 0 ? "1" : "0", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, float(items[idx].num_variants + 1));
+		items[idx].cvar = CreateConVar(
+			cvar_name,
+			items[idx].flags[0] & ITEMFLAG_DISABLED == 0 ? "1" : "0",
+			cvar_desc,
+			FCVAR_NOTIFY,
+			true,
+			0.0,
+			true,
+			float(items[idx].num_variants + 1)
+		);
+
+		for (int i = 0; i <= items[idx].num_variants; i++) {
+			if (items[idx].cvar_pick != null) break;
+
+			if (items[idx].flags[i] & ITEMFLAG_PICKABLE == 0) continue;
+
+			Format(cvar_name, sizeof(cvar_name), "sm_reverts__item_%s_pick", items[idx].key);
+			Format(cvar_desc, sizeof(cvar_desc), (PLUGIN_NAME ... " - Allow %T to be toggled by the player (if allowed)\n\n"), items[idx].key, LANG_SERVER);
+
+			items[idx].cvar_pick = CreateConVar(cvar_name, "1", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, 1.0);
+			break;
+		}
 #if defined MEMORY_PATCHES
 		if (items[idx].mem_patch) {
 			items[idx].cvar.AddChangeHook(OnServerCvarChanged);
@@ -5467,6 +5489,7 @@ void ItemPlayerApply(int client) {
 		) {
 			if (
 				!cvar_enable_pickable_reverts.BoolValue ||
+				!(items[idx].cvar_pick != null && items[idx].cvar_pick.BoolValue) ||
 				(items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE) == 0 ||
 				players[client].items_pick[idx] == true
 			) {
@@ -5634,7 +5657,11 @@ void PickMenu(int client, int selection = 0) {
 	for (int idx = 0; idx < NUM_ITEMS; idx++) {
 		variant_idx = GetItemVariant(idx);
 		if (variant_idx > -1) {
-			if (items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE != 0) {
+			if (
+				items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE != 0 &&
+				items[idx].cvar_pick != null &&
+				items[idx].cvar_pick.BoolValue
+			) {
 				Format(item_name,sizeof(item_name),"%T",items[idx].key,client);
 				menu_pick.AddItem(items[idx].key,item_name);
 				count++;
