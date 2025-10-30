@@ -7016,6 +7016,18 @@ int abs(int x)
 }
 
 /**
+ * Get the lesser integer between two integers.
+ * 
+ * @param x		Integer x.
+ * @param y		Integer y.
+ * @return		The lesser integer between x and y.
+ */
+int intMin(int x, int y)
+{
+	return x > y ? y : x;
+}
+
+/**
  * Get the greater integer between two integers.
  * 
  * @param x		Integer x.
