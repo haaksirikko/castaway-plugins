@@ -176,6 +176,132 @@ enum struct Item {
 	bool mem_patch;
 }
 
+//weapon caching
+//this would break if you ever enabled picking up weapons from the ground!
+//add weapons to the FRONT of this enum to maintain the player_weapons array size
+enum
+{
+	//Generic class features
+	Feat_Airblast,
+#if defined MEMORY_PATCHES
+	Feat_Flamethrower, // All Flamethrowers
+#endif
+	Feat_Grenade, // All Grenade Launchers
+	Feat_Minigun, // All Miniguns
+#if defined MEMORY_PATCHES
+	Feat_SniperRifle, // All Sniper Rifles
+#endif
+	Feat_Stickybomb, // All Stickybomb Launchers
+	Feat_Sword, // All Swords
+
+	//Item sets
+	Set_SpDelivery,
+	Set_GasJockey,
+	Set_Expert,
+	Set_Hibernate,
+	Set_CrocoStyle,
+	Set_Saharan,
+	
+	//Specific weapons
+	Wep_Airstrike,
+	Wep_Ambassador,
+	Wep_Amputator,
+	Wep_Atomizer,
+	Wep_Axtinguisher,
+	Wep_BabyFace,
+	Wep_Backburner,
+	Wep_BaseJumper,
+	Wep_Beggars,
+	Wep_BlackBox,
+	Wep_Bonk,
+	Wep_Booties,
+	Wep_BrassBeast,
+	Wep_BuffaloSteak,
+	Wep_Bushwacka,
+	Wep_CharginTarge,
+	Wep_Concheror,
+	Wep_CowMangler,
+#if defined MEMORY_PATCHES
+	Wep_CozyCamper,
+#endif
+	Wep_Claidheamh,
+	Wep_CleanerCarbine,
+	Wep_CritCola,
+#if defined MEMORY_PATCHES
+	Wep_Dalokohs,
+#endif
+	Wep_Darwin,
+	Wep_DeadRinger,	
+	Wep_Degreaser,
+#if defined MEMORY_PATCHES
+	Wep_Disciplinary,
+#endif
+	Wep_DragonFury,
+	Wep_Enforcer,
+	Wep_Pickaxe, // Equalizer
+	Wep_EurekaEffect,
+	Wep_Eviction,
+	Wep_FistsSteel,
+	Wep_Cleaver, // Flying Guillotine
+#if defined MEMORY_PATCHES
+	Wep_MadMilk,
+#endif
+	Wep_MarketGardener,
+	Wep_GRU,
+	Wep_Gunboats,
+#if defined MEMORY_PATCHES
+	Wep_Gunslinger,
+#endif
+	Wep_Zatoichi, // Half-Zatoichi
+#if defined MEMORY_PATCHES	
+	Wep_IronBomber,
+#endif
+	Wep_Jag,
+	Wep_LibertyLauncher,
+	Wep_LochLoad,
+	Wep_LooseCannon,
+	Wep_Natascha,
+	Wep_PanicAttack,
+	Wep_Persian,
+	Wep_Phlogistinator,
+	Wep_PocketPistol,
+	Wep_Pomson,
+	Wep_Powerjack,
+	Wep_QuickFix,
+	Wep_Quickiebomb,
+	Wep_Razorback,
+	Wep_RedTapeRecorder,
+	Wep_RescueRanger,
+	Wep_ReserveShooter,
+	Wep_Bison, // Righteous Bison
+	Wep_RocketJumper,
+	Wep_Sandman,
+	Wep_Scottish,
+	Wep_ShortCircuit,
+	Wep_Shortstop,
+	Wep_SydneySleeper,
+	Wep_SodaPopper,
+	Wep_Solemn,
+	Wep_SplendidScreen,
+	Wep_Spycicle,
+	Wep_StickyJumper,
+	Wep_Tomislav,
+	Wep_TideTurner,
+	Wep_TribalmansShiv,
+	Wep_Caber, // Ullapool Caber
+	Wep_VitaSaw,
+	Wep_WarriorSpirit,
+	Wep_Wrangler,
+	Wep_EternalReward, // Your Eternal Reward
+	//must always be at the end of the enum!
+	NUM_ITEMS,
+}
+bool player_weapons[MAXPLAYERS+1][NUM_ITEMS];
+//is there a more elegant way to do this?
+bool prev_player_weapons[MAXPLAYERS+1][NUM_ITEMS];
+Item items[NUM_ITEMS];
+char items_desc[NUM_ITEMS][MAX_VARIANTS+1][256];
+
 enum struct Player {
 	bool items_pick[NUM_ITEMS]; // enabled items the player has chosen
 	int items_life[NUM_ITEMS]; // enabled items for this life (inc cvar)
@@ -343,132 +469,6 @@ int rocket_create_frame;
 //cookies
 Cookie g_hClientMessageCookie;
 Cookie g_hClientShowMoonshot;
-
-//weapon caching
-//this would break if you ever enabled picking up weapons from the ground!
-//add weapons to the FRONT of this enum to maintain the player_weapons array size
-enum
-{
-	//Generic class features
-	Feat_Airblast,
-#if defined MEMORY_PATCHES
-	Feat_Flamethrower, // All Flamethrowers
-#endif
-	Feat_Grenade, // All Grenade Launchers
-	Feat_Minigun, // All Miniguns
-#if defined MEMORY_PATCHES
-	Feat_SniperRifle, // All Sniper Rifles
-#endif
-	Feat_Stickybomb, // All Stickybomb Launchers
-	Feat_Sword, // All Swords
-
-	//Item sets
-	Set_SpDelivery,
-	Set_GasJockey,
-	Set_Expert,
-	Set_Hibernate,
-	Set_CrocoStyle,
-	Set_Saharan,
-	
-	//Specific weapons
-	Wep_Airstrike,
-	Wep_Ambassador,
-	Wep_Amputator,
-	Wep_Atomizer,
-	Wep_Axtinguisher,
-	Wep_BabyFace,
-	Wep_Backburner,
-	Wep_BaseJumper,
-	Wep_Beggars,
-	Wep_BlackBox,
-	Wep_Bonk,
-	Wep_Booties,
-	Wep_BrassBeast,
-	Wep_BuffaloSteak,
-	Wep_Bushwacka,
-	Wep_CharginTarge,
-	Wep_Concheror,
-	Wep_CowMangler,
-#if defined MEMORY_PATCHES
-	Wep_CozyCamper,
-#endif
-	Wep_Claidheamh,
-	Wep_CleanerCarbine,
-	Wep_CritCola,
-#if defined MEMORY_PATCHES
-	Wep_Dalokohs,
-#endif
-	Wep_Darwin,
-	Wep_DeadRinger,	
-	Wep_Degreaser,
-#if defined MEMORY_PATCHES
-	Wep_Disciplinary,
-#endif
-	Wep_DragonFury,
-	Wep_Enforcer,
-	Wep_Pickaxe, // Equalizer
-	Wep_EurekaEffect,
-	Wep_Eviction,
-	Wep_FistsSteel,
-	Wep_Cleaver, // Flying Guillotine
-#if defined MEMORY_PATCHES
-	Wep_MadMilk,
-#endif
-	Wep_MarketGardener,
-	Wep_GRU,
-	Wep_Gunboats,
-#if defined MEMORY_PATCHES
-	Wep_Gunslinger,
-#endif
-	Wep_Zatoichi, // Half-Zatoichi
-#if defined MEMORY_PATCHES	
-	Wep_IronBomber,
-#endif
-	Wep_Jag,
-	Wep_LibertyLauncher,
-	Wep_LochLoad,
-	Wep_LooseCannon,
-	Wep_Natascha,
-	Wep_PanicAttack,
-	Wep_Persian,
-	Wep_Phlogistinator,
-	Wep_PocketPistol,
-	Wep_Pomson,
-	Wep_Powerjack,
-	Wep_QuickFix,
-	Wep_Quickiebomb,
-	Wep_Razorback,
-	Wep_RedTapeRecorder,
-	Wep_RescueRanger,
-	Wep_ReserveShooter,
-	Wep_Bison, // Righteous Bison
-	Wep_RocketJumper,
-	Wep_Sandman,
-	Wep_Scottish,
-	Wep_ShortCircuit,
-	Wep_Shortstop,
-	Wep_SydneySleeper,
-	Wep_SodaPopper,
-	Wep_Solemn,
-	Wep_SplendidScreen,
-	Wep_Spycicle,
-	Wep_StickyJumper,
-	Wep_Tomislav,
-	Wep_TideTurner,
-	Wep_TribalmansShiv,
-	Wep_Caber, // Ullapool Caber
-	Wep_VitaSaw,
-	Wep_WarriorSpirit,
-	Wep_Wrangler,
-	Wep_EternalReward, // Your Eternal Reward
-	//must always be at the end of the enum!
-	NUM_ITEMS,
-}
-bool player_weapons[MAXPLAYERS+1][NUM_ITEMS];
-//is there a more elegant way to do this?
-bool prev_player_weapons[MAXPLAYERS+1][NUM_ITEMS];
-Item items[NUM_ITEMS];
-char items_desc[NUM_ITEMS][MAX_VARIANTS+1][256];
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
 	char game[128];
