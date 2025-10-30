@@ -5293,13 +5293,14 @@ Action Command_Menu(int client, int args) {
 
 		menu_main.AddItem("classinfo", localizedClassInfo);
 		menu_main.AddItem("info", localizedInfo);
-		menu_main.AddItem("infotoggle", localizedInfoToggle);
 
 		if (cvar_enable_pickable_reverts.BoolValue) {
 			char localizedPick[64];
 			Format(localizedPick, sizeof(localizedPick), "%T", "REVERT_MENU_PICK", client);
 			menu_main.AddItem("pick", localizedPick);
 		}
+
+		menu_main.AddItem("infotoggle", localizedInfoToggle);
 
 		if (cvar_show_moonshot.BoolValue) {
 			char localizedMoonshotToggle[64];
@@ -5802,7 +5803,12 @@ int MenuHandler_Pick(Menu menu, MenuAction action, int param1, int param2) {
 			players[param1].picked == true
 		) {
 			//ItemCookieSave(param1);
-			PrintToChat(param1, "[SM] %t", "REVERT_APPLY_CHANGES_NEXT_SPAWN");
+			if (IsPlayerAllowedToRespawnOnLoadoutChange(param1)) {
+				// see if the player is into being respawned on loadout changes
+				QueryClientConVar(param1, "tf_respawn_on_loadoutchanges", OnLoadoutRespawnPreference);
+			} else {
+				PrintToChat(param1, "[SM] %t", "REVERT_APPLY_CHANGES_NEXT_SPAWN");
+			}
 		}
 	}
 	
@@ -5811,6 +5817,31 @@ int MenuHandler_Pick(Menu menu, MenuAction action, int param1, int param2) {
 		return RedrawMenuItem(tmp);
 	}
 	return 0;
+}
+
+// from TF2 Custom Weapons X
+/**
+ * Called after inventory change and we have the client's tf_respawn_on_loadoutchanges convar
+ * value.  Respawn them if desired.
+ */
+void OnLoadoutRespawnPreference(
+	QueryCookie cookie, int client, ConVarQueryResult result,
+	const char[] cvarName, const char[] cvarValue
+) {
+	if (result != ConVarQuery_Okay) {
+		return;
+	} else if (!StringToInt(cvarValue) || !IsPlayerAllowedToRespawnOnLoadoutChange(client)) {
+		// the second check for respawn room is in case we're somehow not in one between
+		// the query and the callback
+		PrintToChat(client, "[SM] %t", "REVERT_APPLY_CHANGES_NEXT_SPAWN");
+		return;
+	}
+	
+	// mark player as regenerating during respawn -- this prevents stickies from despawning
+	// this matches the game's internal behavior during GC loadout changes
+	SetEntProp(client, Prop_Send, "m_bRegenerating", true);
+	TF2_RespawnPlayer(client);
+	SetEntProp(client, Prop_Send, "m_bRegenerating", false);
 }
 
 void PickMenu(int client, int selection = 0) {
@@ -7001,6 +7032,50 @@ float CalcViewsOffset(float angle1[3], float angle2[3]) {
 
 float FixViewAngleY(float angle) {
 	return (angle > 180.0 ? (angle - 360.0) : angle);
+}
+
+// from TF2 Custom Weapons X
+/**
+ * Returns whether or not the player is in a respawn room that their team owns, for the purpose
+ * of respawning on loadout change.
+ */
+static bool IsPlayerInRespawnRoom(int client) {
+	float vecMins[3], vecMaxs[3], vecCenter[3], vecOrigin[3];
+	GetClientMins(client, vecMins);
+	GetClientMaxs(client, vecMaxs);
+	GetClientAbsOrigin(client, vecOrigin);
+	
+	GetCenterFromPoints(vecMins, vecMaxs, vecCenter);
+	AddVectors(vecOrigin, vecCenter, vecCenter);
+	return TF2Util_IsPointInRespawnRoom(vecCenter, client, true);
+}
+
+/**
+ * Returns whether or not the player is allowed to respawn on loadout changes.
+ */
+static bool IsPlayerAllowedToRespawnOnLoadoutChange(int client) {
+	if (!IsClientInGame(client) || !IsPlayerInRespawnRoom(client) || !IsPlayerAlive(client)) {
+		return false;
+	}
+	
+	// prevent respawns on sudden death
+	// ideally we'd base this off of CTFGameRules::CanChangeClassInStalemate(), but that
+	// requires either gamedata or keeping track of the stalemate time ourselves
+	if (GameRules_GetRoundState() == RoundState_Stalemate) {
+		return false;
+	}
+	
+	return true;
+}
+
+// from nosoop stocksoup
+/**
+ * Returns a vector containing the midpoint between two points.
+ */
+stock void GetCenterFromPoints(const float pt1[3], const float pt2[3], float center[3]) {
+	center[0] = pt1[0] + pt2[0] / 2.0;
+	center[1] = pt1[1] + pt2[1] / 2.0;
+	center[2] = pt1[2] + pt2[2] / 2.0;
 }
 
 /** 
