@@ -504,7 +504,7 @@ public void OnPluginStart() {
 	cvar_no_reverts_info_by_default = CreateConVar("sm_reverts__no_reverts_info_on_spawn", "0", (PLUGIN_NAME ... " - Disable loadout change reverts info by default"), _, true, 0.0, true, 1.0);
 	cvar_pre_toughbreak_switch = CreateConVar("sm_reverts__pre_toughbreak_switch", "0", (PLUGIN_NAME ... " - Use pre-toughbreak weapon switch time (0.67 sec instead of 0.5 sec)"), _, true, 0.0, true, 1.0);
 	cvar_enable_shortstop_shove = CreateConVar("sm_reverts__enable_shortstop_shove", "0", (PLUGIN_NAME ... " - Enable alt-fire shove for reverted Shortstop"), _, true, 0.0, true, 1.0);
-	cvar_enable_pickable_reverts = CreateConVar("sm_reverts__enable_pickable_reverts", "1", (PLUGIN_NAME ... " - Allow select reverts to be chosen by the player"), _, true, 0.0, true, 1.0);
+	cvar_enable_pickable_reverts = CreateConVar("sm_reverts__enable_pickable_reverts", "1", (PLUGIN_NAME ... " - Allow select reverts to be chosen by the player.\n 1: enable\n 0: disable\n -1: disable and ignore player item arrays (for dev purposes)"), _, true, -1.0, true, 1.0);
 
 #if defined MEMORY_PATCHES
 	cvar_dropped_weapon_enable.AddChangeHook(OnDroppedWeaponCvarChange);
@@ -5294,7 +5294,7 @@ Action Command_Menu(int client, int args) {
 		menu_main.AddItem("classinfo", localizedClassInfo);
 		menu_main.AddItem("info", localizedInfo);
 
-		if (cvar_enable_pickable_reverts.BoolValue) {
+		if (cvar_enable_pickable_reverts.IntValue == 1) {
 			char localizedPick[64];
 			Format(localizedPick, sizeof(localizedPick), "%T", "REVERT_MENU_PICK", client);
 			menu_main.AddItem("pick", localizedPick);
@@ -5628,7 +5628,10 @@ int GetItemVariant(int wep_enum, int client = 0) {
 	char class[32];
 	
 	if (client <= MaxClients) {
-		if (client > 0) {
+		if (
+			client > 0 &&
+			cvar_enable_pickable_reverts.IntValue != -1
+		) {
 			return players[client].items_life[wep_enum];
 		} else {
 			return cvar_enable.BoolValue ? items[wep_enum].cvar.IntValue - 1 : -1;
@@ -5660,7 +5663,7 @@ void ItemPlayerApply(int client) {
 			variant_idx > -1
 		) {
 			if (
-				!cvar_enable_pickable_reverts.BoolValue ||
+				cvar_enable_pickable_reverts.IntValue != 1 ||
 				(items[idx].flags[variant_idx] & ITEMFLAG_PICKABLE) == 0 ||
 				players[client].items_pick[idx] == true
 			) {
