@@ -106,6 +106,7 @@ public Plugin myinfo = {
 
 #define ITEMFLAG_DISABLED	(1 << 9)	// this item is disabled by default
 #define ITEMFLAG_PICKABLE	(1 << 10)	// players can choose to toggle this item
+#define ITEMFLAG_UNPICKED	(1 << 11)	// if pickable items are enabled, this item is not picked by default
 #define ITEM_COOKIE_VER 1
 
 // game code defs
@@ -545,7 +546,7 @@ public void OnPluginStart() {
 	ItemDefine("booties", "Booties_PreMYM", CLASSFLAG_DEMOMAN, Wep_Booties);
 	ItemDefine("brassbeast", "BrassBeast_PreMYM", CLASSFLAG_HEAVY, Wep_BrassBeast);
 	ItemDefine("bushwacka", "Bushwacka_PreLW", CLASSFLAG_SNIPER | ITEMFLAG_PICKABLE, Wep_Bushwacka);
-	ItemVariant(Wep_Bushwacka, "Bushwacka_PreGM");
+	ItemVariant(Wep_Bushwacka, "Bushwacka_PreGM", ITEMFLAG_PICKABLE);
 	ItemDefine("buffalosteak", "BuffaloSteak_PreMYM", CLASSFLAG_HEAVY, Wep_BuffaloSteak);
 	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Release", ITEMFLAG_PICKABLE);
 	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Pre2013", ITEMFLAG_PICKABLE);
@@ -593,8 +594,8 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Eviction, "Eviction_PreMYM");
 	ItemDefine("expert", "Expert_Release", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Set_Expert);
 	ItemDefine("fiststeel", "FistSteel_PreJI", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_FistsSteel);
-	ItemVariant(Wep_FistsSteel, "FistSteel_PreTB");
-	ItemVariant(Wep_FistsSteel, "FistSteel_Release");
+	ItemVariant(Wep_FistsSteel, "FistSteel_PreTB", ITEMFLAG_PICKABLE);
+	ItemVariant(Wep_FistsSteel, "FistSteel_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("guillotine", "Guillotine_PreJI", CLASSFLAG_SCOUT | ITEMFLAG_PICKABLE, Wep_Cleaver);
 	ItemDefine("gasjockey", "GasJockey_Release", CLASSFLAG_PYRO | ITEMFLAG_DISABLED, Set_GasJockey);
 	ItemDefine("glovesru", "GlovesRU_PreTB", CLASSFLAG_HEAVY | ITEMFLAG_PICKABLE, Wep_GRU);
@@ -603,7 +604,7 @@ public void OnPluginStart() {
 	ItemDefine("gunboats", "Gunboats_Release", CLASSFLAG_SOLDIER, Wep_Gunboats);
 #if defined MEMORY_PATCHES
 	ItemDefine("gunslinger", "Gunslinger_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_Gunslinger);
-	ItemVariant(Wep_Gunslinger, "Gunslinger_Release");
+	ItemVariant(Wep_Gunslinger, "Gunslinger_Release", ITEMFLAG_PICKABLE);
 #endif
 	ItemDefine("zatoichi", "Zatoichi_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN | ITEMFLAG_PICKABLE, Wep_Zatoichi);
 	ItemDefine("hibernate", "Hibernate_Release", CLASSFLAG_HEAVY | ITEMFLAG_DISABLED, Set_Hibernate);
@@ -646,10 +647,10 @@ public void OnPluginStart() {
 	ItemDefine("redtape", "RedTapeRecorder_Release", CLASSFLAG_SPY | ITEMFLAG_DISABLED | ITEMFLAG_PICKABLE, Wep_RedTapeRecorder);
 	ItemDefine("rescueranger", "RescueRanger_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_PICKABLE, Wep_RescueRanger);
 	ItemVariant(Wep_RescueRanger, "RescueRanger_PreJI");
-	ItemVariant(Wep_RescueRanger, "RescueRanger_Release");
+	ItemVariant(Wep_RescueRanger, "RescueRanger_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("reserve", "Reserve_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_PYRO, Wep_ReserveShooter);
 	ItemVariant(Wep_ReserveShooter, "Reserve_PreJI");
-	ItemVariant(Wep_ReserveShooter, "Reserve_Release");
+	ItemVariant(Wep_ReserveShooter, "Reserve_Release", ITEMFLAG_PICKABLE);
 	ItemDefine("bison", "Bison_PreMYM", CLASSFLAG_SOLDIER, Wep_Bison);
 	ItemVariant(Wep_Bison, "Bison_PreTB");
 	ItemDefine("rocketjmp", "RocketJmp_Pre2013", CLASSFLAG_SOLDIER, Wep_RocketJumper);
@@ -1844,7 +1845,8 @@ public void OnGameFrame() {
 
 public void OnClientConnected(int client) {
 	for (int i = 0; i < NUM_ITEMS; i++) {
-		players[client].items_pick[i] = true;
+		int variant_idx = intMax(GetItemVariant(i), 0);
+		players[client].items_pick[i] = (items[i].flags[variant_idx] & ITEMFLAG_UNPICKED) == 0;
 		prev_player_weapons[client][i] = false;
 	}
 
@@ -4967,17 +4969,18 @@ Action SDKHookCB_OnTakeDamageAlive(
 			// pre-WAR! sandman victims take 75% of damage dealt
 
 			if (
-				GetItemVariant(Wep_Sandman) == 1 &&
 				TF2_IsPlayerInCondition(victim, TFCond_Dazed) &&
 				resist_damage
 			) {
-				int stun_fls = GetEntProp(victim, Prop_Send, "m_iStunFlags");
-				if (
-					stun_fls & TF_STUNFLAG_BONKSTUCK != 0 &&
-					stun_fls & TF_STUNFLAG_NOSOUNDOREFFECT == 0
-				) {
-					damage *= 0.75;
-					returnValue = Plugin_Changed;
+				if (GetItemVariant(Wep_Sandman, TF2Util_GetPlayerConditionProvider(victim, TFCond_Dazed)) == 1) {
+					int stun_fls = GetEntProp(victim, Prop_Send, "m_iStunFlags");
+					if (
+						stun_fls & TF_STUNFLAG_BONKSTUCK != 0 &&
+						stun_fls & TF_STUNFLAG_NOSOUNDOREFFECT == 0
+					) {
+						damage *= 0.75;
+						returnValue = Plugin_Changed;
+					}
 				}
 			}
 		}
@@ -5622,7 +5625,7 @@ bool ItemIsEnabled(int wep_enum, int client = 0) {
  * 
  * @param wep_enum		Weapon enum.
  * @param client		Entity index of the client.
- * @return				The weapon variant.
+ * @return				The weapon variant enabled on the server or picked by the client.
  */
 int GetItemVariant(int wep_enum, int client = 0) {
 	char class[32];
@@ -6034,7 +6037,7 @@ int GetEntityOwner(int entityIndex)
 
 	int owner = GetEntPropEnt(entityIndex, Prop_Send, "m_hOwnerEntity");
 
-	if (!IsFakeClient(owner) || IsFakeClient(owner))
+	if (owner >= 1 && owner <= MaxClients)
 		return owner; // Returns the player (or bot) index of the owner
 
 	return -1; // Owner not found
@@ -6662,11 +6665,12 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Pre(int arrowE
 	MRESReturn returnValue = MRES_Ignored;
 	int engineerIndex = GetEntityOwner(arrowEntity); // Get attacking entity.
 	int sentry = parameters.Get(1);
+	int builder = GetEntPropEnt(sentry, Prop_Send, "m_hBuilder");
 
 #if defined MEMORY_PATCHES
 	// Do not allow healing on mini sentries.
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(sentry, Prop_Send, "m_bMiniBuilding")
 	) {
 		return MRES_Supercede;
@@ -6708,11 +6712,12 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Post(int arrow
 	MRESReturn returnValue = MRES_Ignored;
 	int buildingIndex = parameters.Get(1);
 	int engineerIndex = GetEntityOwner(arrowEntity);
+	int builder = GetEntPropEnt(buildingIndex, Prop_Send, "m_hBuilder");
 
 #if defined MEMORY_PATCHES
 	// Do not allow healing on mini sentries.
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(buildingIndex, Prop_Send, "m_bMiniBuilding")
 	) {
 		return MRES_Supercede;
@@ -6888,9 +6893,10 @@ MRESReturn DHookCallback_CObjectSentrygun_OnWrenchHit_Pre(int entity, DHookRetur
 	}
 
 #if defined MEMORY_PATCHES
+	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	// Do not allow repairs on mini sentries. Mini sentries can still get refilled with ammo.
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(entity, Prop_Send, "m_bMiniBuilding")
 	) {
 		// Refill ammo for mini sentry. Logic sourced from TF2 source code
@@ -6946,8 +6952,9 @@ MRESReturn DHookCallback_CObjectSentrygun_OnWrenchHit_Post(int entity, DHookRetu
 
 #if defined MEMORY_PATCHES
 MRESReturn DHookCallback_CObjectSentrygun_StartBuilding(int entity, DHookReturn returnValue, DHookParam parameters) {
+	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(entity, Prop_Send, "m_bMiniBuilding") &&
 		!GetEntProp(entity, Prop_Send, "m_bCarryDeploy")
 	) {
@@ -6958,8 +6965,9 @@ MRESReturn DHookCallback_CObjectSentrygun_StartBuilding(int entity, DHookReturn 
 }
 
 MRESReturn DHookCallback_CObjectSentrygun_Construct_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
+	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(entity, Prop_Send, "m_bMiniBuilding")
 	) {
 		Address m_flHealth = GetEntityAddress(entity) + CBaseObject_m_flHealth;
@@ -6969,14 +6977,15 @@ MRESReturn DHookCallback_CObjectSentrygun_Construct_Pre(int entity, DHookReturn 
 }
 
 MRESReturn DHookCallback_CObjectSentrygun_Construct_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
+	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(entity, Prop_Send, "m_bMiniBuilding")
 	) {
 		Address m_flHealth = GetEntityAddress(entity) + CBaseObject_m_flHealth;
 		if (SDKCall(sdkcall_CBaseObject_GetReversesBuildingConstructionSpeed, entity))
 			StoreToAddress(m_flHealth, view_as<float>(LoadFromAddress(m_flHealth, NumberType_Int32)) - 0.5, NumberType_Int32);
-		else if (GetItemVariant(Wep_Gunslinger) == 0) {
+		else if (GetItemVariant(Wep_Gunslinger, builder) == 0) {
 			// Pre-GM Gunslinger, prevent mini sentries from gaining health while being built.
 			StoreToAddress(m_flHealth, entities[entity].minisentry_health, NumberType_Int32);
 		} else {
@@ -6992,8 +7001,9 @@ MRESReturn DHookCallback_CObjectSentrygun_Construct_Post(int entity, DHookReturn
 
 MRESReturn DHookCallback_CBaseObject_OnConstructionHit(int entity, DHookReturn returnValue) {
 	char class[64];
+	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(entity, Prop_Send, "m_bMiniBuilding")
 	) {
 		GetEntityClassname(entity, class, sizeof(class));
@@ -7008,9 +7018,10 @@ MRESReturn DHookCallback_CBaseObject_OnConstructionHit(int entity, DHookReturn r
 
 MRESReturn DHookCallback_CBaseObject_CreateAmmoPack(int entity, DHookReturn returnValue, DHookParam parameters)
 {
+	int builder = GetEntPropEnt(entity, Prop_Send, "m_hBuilder");
 	// Allow metal to be picked up from mini sentry gibs.
     if (
-		ItemIsEnabled(Wep_Gunslinger) &&
+		ItemIsEnabled(Wep_Gunslinger, builder) &&
 		GetEntProp(entity, Prop_Send, "m_bMiniBuilding")
 	) {
         parameters.Set(2, 7);
@@ -7085,7 +7096,7 @@ stock void GetCenterFromPoints(const float pt1[3], const float pt2[3], float cen
  * Get an absolute value of an integer.
  * 
  * @param x		Integer.
- * @retrun		Absolute value of x.
+ * @return		Absolute value of x.
  */
 int abs(int x)
 {
