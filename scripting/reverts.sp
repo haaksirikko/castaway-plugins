@@ -244,6 +244,7 @@ enum struct Item {
 	int flags;
 	int num_variants;
 	ConVar cvar;
+	Cookie cookie;
 }
 
 //weapon caching
@@ -388,7 +389,7 @@ enum struct Player {
 	// are there pending attrib changes?
 	bool change;
 	// made any changes in the pick menu
-	bool picked;
+	//bool picked;
 	// frame to force a respawn after
 	int respawn;
 	bool received_help_notice;
@@ -2313,6 +2314,12 @@ public void OnClientPutInServer(int client) {
 	SDKHook(client, SDKHook_OnTakeDamageAlive, SDKHookCB_OnTakeDamageAlive);
 	SDKHook(client, SDKHook_OnTakeDamagePost, SDKHookCB_OnTakeDamagePost);
 	SDKHook(client, SDKHook_WeaponSwitchPost, SDKHookCB_WeaponSwitchPost);
+}
+
+public void OnClientCookiesCached(int client) {
+	if (IsFakeClient(client) == false) {
+		ItemCookieLoad(client);
+	}
 }
 
 public void OnEntityCreated(int entity, const char[] class) {
@@ -5874,6 +5881,14 @@ Action Command_Pick(int client, int args) {
 			ReplyToCommand(client, "[SM] %t", "REVERT_PICK_INVALID_VARIANT", v_int);
 			return Plugin_Handled;
 		}
+
+		if (
+			AreClientCookiesCached(client) &&
+			items[idx].cookie != null
+		) {
+			items[idx].cookie.SetInt(client, v_int);
+		}
+
 		players[client].items_pick[idx] = v_int;
 		if (v_int > -1) {
 			ReplyToCommand(client, "[SM] %s -> %d: %t", key, v_int, items_desc[idx][v_int]);
@@ -6060,6 +6075,13 @@ void ItemFinalize() {
 		}
 
 		items[idx].cvar = CreateConVar(cvar_name, items[idx].flags & ITEMFLAG_DISABLED == 0 ? "1" : "0", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, float(items[idx].num_variants + 1));
+
+		if (
+			items[idx].flags & ITEMFLAG_UNPICKABLE ||
+			items[idx].flags & ITEMFLAG_MEMPATCH
+		) {
+			items[idx].cookie = new Cookie(items[idx].key, "", CookieAccess_Protected);
+		}
 #if defined MEMORY_PATCHES
 		if (items[idx].flags & ITEMFLAG_MEMPATCH) {
 			items[idx].cvar.AddChangeHook(OnServerCvarChanged);
@@ -6180,6 +6202,20 @@ void PlayerRemoveEquipment(int client)
 	for (int i = 0; i < TF2Util_GetPlayerWearableCount(client); i++)
 	{
 		TF2_RemoveWearable(client, TF2Util_GetPlayerWearable(client, i));
+	}
+}
+
+void ItemCookieLoad(int client) {
+	for (int i = 0; i < NUM_ITEMS; i++) {
+		if (items[i].cookie != null) {
+			players[client].items_pick[i] = items[i].cookie.GetInt(client, GetItemVariant(i));
+		}
+	}
+
+	ItemPlayerApply(client);
+
+	if (IsClientInGame(client) == false) {
+		players[client].change = false;
 	}
 }
 
