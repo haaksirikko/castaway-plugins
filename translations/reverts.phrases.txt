@@ -120,6 +120,42 @@
 		"#format"	"{1:s},{2:s}"
 		"en"		"{1} just landed a MOONSHOT on {2} !"
 	}
+	"REVERT_PICK_USAGE"
+	{
+		"en"	"Usage: %s <list | item key> [variant]"
+	}
+	"REVERT_PICK_LIST"
+	{
+		"en"	"List of pickable items:"
+	}
+	"REVERT_PICK_LIST_NONE"
+	{
+		"en"	"There are no pickable reverts."
+	}
+	"REVERT_PICK_INVALID_ITEM"
+	{
+		"en"	"Item %s not found"
+	}
+	"REVERT_PICK_ITEM_NOT_PICKABLE"
+	{
+		"en"	"%s is not pickable"
+	}
+	"REVERT_PICK_AVAILABLE_VARIANTS"
+	{
+		"en"	"Pickable variants available for %t:"
+	}
+	"REVERT_PICK_DISABLE"
+	{
+		"en"	"%d: Disable"
+	}
+	"REVERT_PICK_INVALID_VARIANT"
+	{
+		"en"	"Invalid variant %d"
+	}
+	"REVERT_PICKABLE_VARIANTS_HINT"
+	{
+		"en"	"This item has pickable variants. Use !pick %s to see them."
+	}
 	"REVERT_APPLY_CHANGES_NEXT_SPAWN"
 	{
 		"en"	"Changes will be applied on next spawn"
