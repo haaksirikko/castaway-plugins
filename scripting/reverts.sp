@@ -119,6 +119,8 @@ int resistance_mapping[] =
 #define CLASSFLAG_ENGINEER	(1 << 8)
 
 #define ITEMFLAG_DISABLED	(1 << 9) // Disabled by default
+#define ITEMFLAG_UNPICKABLE (1 << 10) // This revert cannot have pickable variants
+#define ITEMFLAG_MEMPATCH (1 << 11) // Requires a memory patch
 
 // game code defs
 #define EF_NODRAW 0x20
@@ -232,14 +234,158 @@ enum struct Item {
 	int flags;
 	int num_variants;
 	ConVar cvar;
-	bool mem_patch;
 }
 
+//weapon caching
+//add weapons to the FRONT of this enum to maintain the player_weapons array size
+enum
+{
+	// Generic class features
+	Feat_Airblast,
+#if defined MEMORY_PATCHES
+	Feat_Flamethrower, // All Flamethrowers
+#endif
+	Feat_Grenade, // All Grenade Launchers
+	Feat_Lunchbox, // All Lunchbox Items
+	Feat_Medigun, // All Mediguns
+	Feat_Minigun, // All Miniguns
+	Feat_Sentry, // All Sentry Guns
+#if defined MEMORY_PATCHES
+	Feat_SniperRifle, // All Sniper Rifles
+#endif
+	Feat_Stickybomb, // All Stickybomb Launchers
+	Feat_Sword, // All Swords
+
+	// Item sets
+	Set_SpDelivery,		// Scout
+	Set_TankBuster,		// Soldier
+	Set_GasJockey,		// Pyro
+	Set_Expert,			// Demoman
+	Set_Hibernate,		// Heavy
+	Set_Medieval,		// Medic
+	Set_CrocoStyle,		// Sniper
+	Set_Saharan, 		// Spy
+	
+	// Specific weapons
+	Wep_Airstrike,
+	Wep_Ambassador,
+	Wep_Amputator,
+	Wep_Atomizer,
+	Wep_Axtinguisher,
+	Wep_BabyFace,
+	Wep_Backburner,
+	Wep_BaseJumper,
+	Wep_Battalions,
+	Wep_BazaarBargain,	
+	Wep_Beggars,
+	Wep_BlackBox,
+	Wep_Bonk,
+	Wep_Booties,
+	Wep_BrassBeast,
+	Wep_BuffaloSteak,
+	Wep_BuffBanner,
+	Wep_Bushwacka,
+	Wep_CharginTarge,
+	Wep_Claidheamh,
+	Wep_CleanerCarbine,
+	Wep_Concheror,
+	Wep_CowMangler,
+#if defined MEMORY_PATCHES
+	Wep_CozyCamper,
+#endif	
+	Wep_CritCola,
+#if defined MEMORY_PATCHES
+	Wep_Crossbow,
+#endif
+	Wep_Dalokohs,
+	Wep_Darwin,
+	Wep_DeadRinger,	
+	Wep_Degreaser,
+	Wep_DirectHit,
+#if defined MEMORY_PATCHES
+	Wep_Disciplinary,
+#endif
+	Wep_DragonFury,
+	Wep_Enforcer,
+	Wep_Pickaxe, // Equalizer
+	Wep_EurekaEffect,
+	Wep_Eviction,
+	Wep_FistsSteel,
+	Wep_Cleaver, // Flying Guillotine
+	Wep_GRU, // Gloves of Running Urgently
+	Wep_Gunboats,
+	Wep_Gunslinger,
+	Wep_Zatoichi, // Half-Zatoichi
+	Wep_Huntsman,
+#if defined MEMORY_PATCHES	
+	Wep_IronBomber,
+#endif
+	Wep_Jag,
+	Wep_LibertyLauncher,
+	Wep_LochLoad,
+	Wep_LooseCannon,
+#if defined MEMORY_PATCHES
+	Wep_MadMilk,
+#endif
+	Wep_MarketGardener,
+	Wep_Natascha,
+	Wep_PanicAttack,
+	Wep_Persian,
+	Wep_Phlogistinator,
+	Wep_PocketPistol,
+	Wep_Pomson,
+	Wep_Powerjack,
+	Wep_QuickFix,
+	Wep_Quickiebomb,
+	Wep_Razorback,
+	Wep_RescueRanger,
+	Wep_ReserveShooter,
+	Wep_Bison, // Righteous Bison
+	Wep_RocketJumper,
+	Wep_Sandman,
+	Wep_Sandvich,
+	Wep_Scottish,
+	Wep_ShortCircuit,
+	Wep_Shortstop,
+	Wep_SodaPopper,
+	Wep_Solemn,
+	Wep_SplendidScreen,
+	Wep_Spycicle,
+	Wep_StickyJumper,
+	Wep_SydneySleeper,
+	Wep_TideTurner,
+	Wep_Tomislav,	
+	Wep_TribalmansShiv,
+	Wep_Caber, // Ullapool Caber
+	Wep_Vaccinator,
+	Wep_VitaSaw,
+	Wep_WarriorSpirit,
+	Wep_Wrangler,
+	Wep_EternalReward, // Your Eternal Reward
+	//must always be at the end of the enum!
+	NUM_ITEMS,
+}
+bool player_weapons[MAXPLAYERS+1][NUM_ITEMS];
+//is there a more elegant way to do this?
+bool prev_player_weapons[MAXPLAYERS+1][NUM_ITEMS];
+Item items[NUM_ITEMS];
+char items_desc[NUM_ITEMS][MAX_VARIANTS+1][256];
+
 enum struct Player {
-	//int respawn; // frame to force a respawn after
+	// enabled items the player has chosen
+	int items_pick[NUM_ITEMS];
+	// enabled items for this life (inc cvar)
+	int items_life[NUM_ITEMS];
+	// are there pending attrib changes?
+	bool change;
+	// made any changes in the pick menu
+	bool picked;
+	// frame to force a respawn after
+	int respawn;
 	bool received_help_notice;
 
 	// gameplay vars
+
 	float resupply_time;
 	int headshot_frame;
 	bool hit_by_headshot;
@@ -444,139 +590,6 @@ int team_round_timer_entity;
 Cookie g_hClientMessageCookie;
 Cookie g_hClientShowMoonshot;
 
-//weapon caching
-//add weapons to the FRONT of this enum to maintain the player_weapons array size
-enum
-{
-	// Generic class features
-	Feat_Airblast,
-#if defined MEMORY_PATCHES
-	Feat_Flamethrower, // All Flamethrowers
-#endif
-	Feat_Grenade, // All Grenade Launchers
-	Feat_Lunchbox, // All Lunchbox Items
-	Feat_Medigun, // All Mediguns
-	Feat_Minigun, // All Miniguns
-	Feat_Sentry, // All Sentry Guns
-#if defined MEMORY_PATCHES
-	Feat_SniperRifle, // All Sniper Rifles
-#endif
-	Feat_Stickybomb, // All Stickybomb Launchers
-	Feat_Sword, // All Swords
-
-	// Item sets
-	Set_SpDelivery,		// Scout
-	Set_TankBuster,		// Soldier
-	Set_GasJockey,		// Pyro
-	Set_Expert,			// Demoman
-	Set_Hibernate,		// Heavy
-	Set_Medieval,		// Medic
-	Set_CrocoStyle,		// Sniper
-	Set_Saharan, 		// Spy
-	
-	// Specific weapons
-	Wep_Airstrike,
-	Wep_Ambassador,
-	Wep_Amputator,
-	Wep_Atomizer,
-	Wep_Axtinguisher,
-	Wep_BabyFace,
-	Wep_Backburner,
-	Wep_BaseJumper,
-	Wep_Battalions,
-	Wep_BazaarBargain,	
-	Wep_Beggars,
-	Wep_BlackBox,
-	Wep_Bonk,
-	Wep_Booties,
-	Wep_BrassBeast,
-	Wep_BuffaloSteak,
-	Wep_BuffBanner,
-	Wep_Bushwacka,
-	Wep_CharginTarge,
-	Wep_Claidheamh,
-	Wep_CleanerCarbine,
-	Wep_Concheror,
-	Wep_CowMangler,
-	Wep_CozyCamper,
-	Wep_CritCola,
-#if defined MEMORY_PATCHES
-	Wep_Crossbow,
-#endif
-	Wep_Dalokohs,
-	Wep_Darwin,
-	Wep_DeadRinger,	
-	Wep_Degreaser,
-	Wep_DirectHit,
-#if defined MEMORY_PATCHES
-	Wep_Disciplinary,
-#endif
-	Wep_DragonFury,
-	Wep_Enforcer,
-	Wep_Pickaxe, // Equalizer
-	Wep_EurekaEffect,
-	Wep_Eviction,
-	Wep_FistsSteel,
-	Wep_Cleaver, // Flying Guillotine
-	Wep_GRU, // Gloves of Running Urgently
-	Wep_Gunboats,
-	Wep_Gunslinger,
-	Wep_Zatoichi, // Half-Zatoichi
-	Wep_Huntsman,
-#if defined MEMORY_PATCHES	
-	Wep_IronBomber,
-#endif
-	Wep_Jag,
-	Wep_LibertyLauncher,
-	Wep_LochLoad,
-	Wep_LooseCannon,
-#if defined MEMORY_PATCHES
-	Wep_MadMilk,
-#endif
-	Wep_MarketGardener,
-	Wep_Natascha,
-	Wep_PanicAttack,
-	Wep_Persian,
-	Wep_Phlogistinator,
-	Wep_PocketPistol,
-	Wep_Pomson,
-	Wep_Powerjack,
-	Wep_QuickFix,
-	Wep_Quickiebomb,
-	Wep_Razorback,
-	Wep_RescueRanger,
-	Wep_ReserveShooter,
-	Wep_Bison, // Righteous Bison
-	Wep_RocketJumper,
-	Wep_Sandman,
-	Wep_Sandvich,
-	Wep_Scottish,
-	Wep_ShortCircuit,
-	Wep_Shortstop,
-	Wep_SodaPopper,
-	Wep_Solemn,
-	Wep_SplendidScreen,
-	Wep_Spycicle,
-	Wep_StickyJumper,
-	Wep_SydneySleeper,
-	Wep_TideTurner,
-	Wep_Tomislav,	
-	Wep_TribalmansShiv,
-	Wep_Caber, // Ullapool Caber
-	Wep_Vaccinator,
-	Wep_VitaSaw,
-	Wep_WarriorSpirit,
-	Wep_Wrangler,
-	Wep_EternalReward, // Your Eternal Reward
-	//must always be at the end of the enum!
-	NUM_ITEMS,
-}
-bool player_weapons[MAXPLAYERS+1][NUM_ITEMS];
-//is there a more elegant way to do this?
-bool prev_player_weapons[MAXPLAYERS+1][NUM_ITEMS];
-Item items[NUM_ITEMS];
-char items_desc[NUM_ITEMS][MAX_VARIANTS+1][256];
-
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
 	char game[128];
 	GetGameFolderName(game, sizeof(game));
@@ -622,7 +635,7 @@ public void OnPluginStart() {
 	// Generic class features
 	ItemDefine("airblast", "Airblast_PreJI", CLASSFLAG_PYRO, Feat_Airblast);
 #if defined MEMORY_PATCHES
-	ItemDefine("flamethrower", "Flamethrower_PreBM", CLASSFLAG_PYRO, Feat_Flamethrower, true);
+	ItemDefine("flamethrower", "Flamethrower_PreBM", CLASSFLAG_PYRO | ITEMFLAG_MEMPATCH, Feat_Flamethrower);
 #endif
 	ItemDefine("grenade", "Grenade_Pre2014", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Feat_Grenade);
 	ItemDefine("lunchbox", "Lunchbox_Pre2012", CLASSFLAG_HEAVY | ITEMFLAG_DISABLED, Feat_Lunchbox);
@@ -630,7 +643,7 @@ public void OnPluginStart() {
 	ItemDefine("miniramp", "Minigun_ramp_PreLW", CLASSFLAG_HEAVY, Feat_Minigun);
 	ItemDefine("sentry", "Sentry_PreTB", CLASSFLAG_ENGINEER, Feat_Sentry);
 #if defined MEMORY_PATCHES
-	ItemDefine("sniperrifles", "SniperRifle_PreLW", CLASSFLAG_SNIPER, Feat_SniperRifle, true);
+	ItemDefine("sniperrifles", "SniperRifle_PreLW", CLASSFLAG_SNIPER | ITEMFLAG_MEMPATCH, Feat_SniperRifle);
 #endif
 	ItemDefine("stickybomb", "Stickybomb_PreLW", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Feat_Stickybomb);
 	ItemDefine("swords", "Swords_PreTB", CLASSFLAG_DEMOMAN, Feat_Sword);
@@ -672,7 +685,7 @@ public void OnPluginStart() {
 	ItemDefine("brassbeast", "BrassBeast_PreMYM", CLASSFLAG_HEAVY, Wep_BrassBeast);
 	ItemDefine("bushwacka", "Bushwacka_PreLW", CLASSFLAG_SNIPER, Wep_Bushwacka);
 	ItemVariant(Wep_Bushwacka, "Bushwacka_PreGM");
-	ItemDefine("buffalosteak", "BuffaloSteak_PreMYM", CLASSFLAG_HEAVY, Wep_BuffaloSteak, true);
+	ItemDefine("buffalosteak", "BuffaloSteak_PreMYM", CLASSFLAG_HEAVY | ITEMFLAG_MEMPATCH, Wep_BuffaloSteak);
 	ItemVariant(Wep_BuffaloSteak, "BuffaloSteak_Release");
 	ItemDefine("buffbanner", "BuffBanner_Release", CLASSFLAG_SOLDIER | ITEMFLAG_DISABLED, Wep_BuffBanner);
 	ItemDefine("targe", "Targe_PreTB", CLASSFLAG_DEMOMAN, Wep_CharginTarge);
@@ -683,7 +696,7 @@ public void OnPluginStart() {
 	ItemDefine("cowmangler", "CowMangler_Pre2013", CLASSFLAG_SOLDIER | ITEMFLAG_DISABLED, Wep_CowMangler);
 	ItemDefine("cozycamper", "CozyCamper_PreMYM", CLASSFLAG_SNIPER, Wep_CozyCamper);
 #if defined MEMORY_PATCHES
-	ItemDefine("crossbow", "CrusadersCrossbow_PreJI", CLASSFLAG_MEDIC, Wep_Crossbow, true);
+	ItemDefine("crossbow", "CrusadersCrossbow_PreJI", CLASSFLAG_MEDIC | ITEMFLAG_MEMPATCH, Wep_Crossbow);
 #endif
 	ItemDefine("critcola", "CritCola_PreMYM", CLASSFLAG_SCOUT, Wep_CritCola);
 	ItemVariant(Wep_CritCola, "CritCola_PreJI");
@@ -696,10 +709,10 @@ public void OnPluginStart() {
 	ItemDefine("degreaser", "Degreaser_PreTB", CLASSFLAG_PYRO, Wep_Degreaser);
 	ItemDefine("directhit", "DirectHit_PreJI", CLASSFLAG_SOLDIER, Wep_DirectHit);
 #if defined MEMORY_PATCHES
-	ItemDefine("disciplinary", "Disciplinary_PreMYM", CLASSFLAG_SOLDIER, Wep_Disciplinary, true);
+	ItemDefine("disciplinary", "Disciplinary_PreMYM", CLASSFLAG_SOLDIER | ITEMFLAG_MEMPATCH, Wep_Disciplinary);
 #endif
 #if defined MEMORY_PATCHES
-	ItemDefine("dragonfury", "DragonFury_Release", CLASSFLAG_PYRO, Wep_DragonFury, true);
+	ItemDefine("dragonfury", "DragonFury_Release", CLASSFLAG_PYRO | ITEMFLAG_MEMPATCH, Wep_DragonFury);
 #else
 	ItemDefine("dragonfury", "DragonFury_Release_Patchless", CLASSFLAG_PYRO, Wep_DragonFury);
 #endif
@@ -723,7 +736,7 @@ public void OnPluginStart() {
 	ItemDefine("zatoichi", "Zatoichi_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_Zatoichi);
 	ItemDefine("huntsman", "Huntsman_Pre2013", CLASSFLAG_SNIPER, Wep_Huntsman);
 #if defined MEMORY_PATCHES
-	ItemDefine("ironbomber", "IronBomber_Pre2022", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Wep_IronBomber, true);
+	ItemDefine("ironbomber", "IronBomber_Pre2022", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_MEMPATCH, Wep_IronBomber);
 #endif
 	ItemDefine("jag", "Jag_PreTB", CLASSFLAG_ENGINEER, Wep_Jag);
 	ItemVariant(Wep_Jag, "Jag_PreGM");
@@ -732,7 +745,7 @@ public void OnPluginStart() {
 	ItemVariant(Wep_LochLoad, "LochLoad_2013");
 	ItemDefine("cannon", "Cannon_PreTB", CLASSFLAG_DEMOMAN, Wep_LooseCannon);
 #if defined MEMORY_PATCHES
-	ItemDefine("madmilk", "MadMilk_Release", CLASSFLAG_SCOUT, Wep_MadMilk, true);
+	ItemDefine("madmilk", "MadMilk_Release", CLASSFLAG_SCOUT | ITEMFLAG_MEMPATCH, Wep_MadMilk);
 #endif
 	ItemDefine("gardener", "Gardener_PreTB", CLASSFLAG_SOLDIER, Wep_MarketGardener);
 	ItemDefine("natascha", "Natascha_PreMYM", CLASSFLAG_HEAVY, Wep_Natascha);
@@ -754,7 +767,7 @@ public void OnPluginStart() {
 	ItemVariant(Wep_PocketPistol, "Pocket_PreBM");
 	ItemVariant(Wep_PocketPistol, "Pocket_PreJI");
 #if defined MEMORY_PATCHES
-	ItemDefine("quickfix", "Quickfix_PreTB", CLASSFLAG_MEDIC, Wep_QuickFix, true);
+	ItemDefine("quickfix", "Quickfix_PreTB", CLASSFLAG_MEDIC | ITEMFLAG_MEMPATCH, Wep_QuickFix);
 #else
 	ItemDefine("quickfix", "Quickfix_PreMYM", CLASSFLAG_MEDIC, Wep_QuickFix);
 #endif
@@ -805,7 +818,7 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Vaccinator, "Vaccinator_PreGM");
 	ItemDefine("vitasaw", "VitaSaw_PreJI", CLASSFLAG_MEDIC, Wep_VitaSaw);
 	ItemDefine("warrior", "Warrior_PreTB", CLASSFLAG_HEAVY, Wep_WarriorSpirit);
-	ItemDefine("wrangler", "Wrangler_PreGM", CLASSFLAG_ENGINEER, Wep_Wrangler, true);
+	ItemDefine("wrangler", "Wrangler_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_MEMPATCH, Wep_Wrangler);
 	ItemVariant(Wep_Wrangler, "Wrangler_PreLW");
 #if defined MEMORY_PATCHES
 	ItemVariant(Wep_Wrangler, "Wrangler_Release");
@@ -1458,16 +1471,14 @@ public void OnGameFrame() {
 				{
 					// respawn to apply attribs
 
-					// if (players[idx].respawn > 0) {
-					// 	if ((players[idx].respawn + 2) == GetGameTickCount()) {
-					// 		TF2_RespawnPlayer(idx);
-					// 		players[idx].respawn = 0;
-
-					// 		PrintToChat(idx, "[SM] Revert changes have been applied");
-					// 	}
-
-					// 	continue;
-					// }
+					if (players[idx].respawn > 0) {
+						if ((players[idx].respawn + 2) == GetGameTickCount()) {
+							TF2_RespawnPlayer(idx);
+							players[idx].respawn = 0;
+							PrintToChat(idx, "[SM] %t", "REVERT_APPLY_CHANGES");
+						}
+						continue;
+					}
 				}
 
 				{
@@ -2180,8 +2191,16 @@ public void OnGameFrame() {
 }
 
 public void OnClientConnected(int client) {
+	// apply item picks
+	for (int i = 0; i < NUM_ITEMS; i++) {
+		players[client].items_pick[i] = GetItemVariant(i);
+		prev_player_weapons[client][i] = false;
+	}
+	ItemPlayerApply(client);
+	players[client].change = IsClientInGame(client);
+
 	// reset these per player
-	//players[client].respawn = 0;
+	players[client].respawn = 0;
 	players[client].resupply_time = 0.0;
 	players[client].medic_medigun_defidx = 0;
 	players[client].medic_medigun_charge = 0.0;
@@ -2189,10 +2208,6 @@ public void OnClientConnected(int client) {
 	players[client].vaccinator_charge = 0.0;
 	players[client].vaccinator_charge_end = 0.0;
 	players[client].received_help_notice = false;
-
-	for (int i = 0; i < NUM_ITEMS; i++) {
-		prev_player_weapons[client][i] = false;
-	}
 }
 
 public void OnClientPutInServer(int client) {
@@ -3324,6 +3339,25 @@ public void TF2Items_OnGiveNamedItem_Post(int client, char[] class, int index, i
 public Action Event_OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	players[client].weapon_switch_time = GetGameTime();
+
+	{
+		// apply attrib changes
+
+		if (IsPlayerAlive(client)) {
+			ItemPlayerApply(client);
+
+			if (players[client].change) {
+				// tf2 only respawns a player's weapon/wearable entities when those entities are different from
+				// the ones that should be equipped, aka when the player changes class or equips a different weapon.
+				// we manually force it to happen by removing the entities and respawning the player a few ticks later.
+
+				PlayerRemoveEquipment(client);
+
+				players[client].respawn = GetGameTickCount();
+				players[client].change = false;
+			}
+		}
+	}
 
 	{
 		// vitasaw charge apply
@@ -5721,12 +5755,11 @@ bool TraceFilter_CustomShortCircuit(int entity, int contentsmask, any data) {
  * @param wep_enum			Weapon enum, this identifies a weapon.
  * @param mem_patch			This revert requires a memory patch?
  */
-void ItemDefine(const char[] key, const char[] desc, int flags, int wep_enum, bool mem_patch=false) {
+void ItemDefine(const char[] key, const char[] desc, int flags, int wep_enum) {
 	strcopy(items[wep_enum].key, sizeof(items[].key), key);
 	strcopy(items_desc[wep_enum][0], sizeof(items_desc[][]), desc);
 	items[wep_enum].flags = flags;
 	items[wep_enum].num_variants = 0;
-	items[wep_enum].mem_patch = mem_patch;
 }
 
 /**
@@ -5768,7 +5801,7 @@ void ItemFinalize() {
 
 		items[idx].cvar = CreateConVar(cvar_name, items[idx].flags & ITEMFLAG_DISABLED == 0 ? "1" : "0", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, float(items[idx].num_variants + 1));
 #if defined MEMORY_PATCHES
-		if (items[idx].mem_patch) {
+		if (items[idx].flags & ITEMFLAG_MEMPATCH) {
 			items[idx].cvar.AddChangeHook(OnServerCvarChanged);
 		}
 #endif
@@ -5779,20 +5812,62 @@ void ItemFinalize() {
  * Check if an item is enabled.
  * 
  * @param wep_enum		Weapon enum.
- * @return				True if an item revert is enabled on the server, false otherwise.
+ * @param client		Entity index of the client.
+ * @return				True if an item revert is enabled on the server or picked by the client, false otherwise.
  */
-bool ItemIsEnabled(int wep_enum) {
-	return cvar_enable.BoolValue && items[wep_enum].cvar.IntValue >= 1;
+bool ItemIsEnabled(int wep_enum, int client = 0) {
+	return GetItemVariant(wep_enum, client) > -1;
 }
 
 /**
- * Get the item variant enabled on a server.
+ * Get the item variant enabled.
  * 
  * @param wep_enum		Weapon enum.
+ * @param client		Entity index of the client.
  * @return				The weapon variant.
  */
-int GetItemVariant(int wep_enum) {
-	return cvar_enable.BoolValue ? items[wep_enum].cvar.IntValue - 1 : -1;
+int GetItemVariant(int wep_enum, int client = 0) {
+	char class[32];
+	
+	if (client <= MaxClients) {
+		if (client > 0) {
+			return players[client].items_life[wep_enum];
+		} else {
+			return cvar_enable.BoolValue ? items[wep_enum].cvar.IntValue - 1 : -1;
+		}
+	} else {
+		if (IsValidEntity(client)) {
+			GetEntityClassname(client, class, sizeof(class));
+		} else {
+			strcopy(class, sizeof(class), "NULL");
+		}
+
+		LogError("ItemIsEnabled/GetItemVariant called for invalid client (item %s, index %d, class %s)", items[wep_enum].key, client, class);
+	}
+
+	return -1;
+}
+
+void ItemPlayerApply(int client)
+{
+	for (int i = 0; i < NUM_ITEMS; i++) {
+		int value = players[client].items_pick[i];
+
+		if (players[client].items_life[i] != value) {
+			players[client].items_life[i] = value;
+			players[client].change = true;
+		}
+	}
+}
+
+void PlayerRemoveEquipment(int client)
+{
+	TF2_RemoveAllWeapons(client);
+
+	for (int i = 0; i < TF2Util_GetPlayerWearableCount(client); i++)
+	{
+		TF2_RemoveWearable(client, TF2Util_GetPlayerWearable(client, i));
+	}
 }
 
 int MenuHandler_Main(Menu menu, MenuAction action, int param1, int param2) {

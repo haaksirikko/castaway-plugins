@@ -120,6 +120,14 @@
 		"#format"	"{1:s},{2:s}"
 		"en"		"{1} just landed a MOONSHOT on {2} !"
 	}
+	"REVERT_APPLY_CHANGES_NEXT_SPAWN"
+	{
+		"en"	"Changes will be applied on next spawn"
+	}
+	"REVERT_APPLY_CHANGES"
+	{
+		"en"	"Revert changes have been applied"
+	}
 
 	// item names
 	"airblast"
