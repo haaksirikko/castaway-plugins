@@ -234,6 +234,7 @@ enum struct Item {
 	int flags;
 	int num_variants;
 	ConVar cvar;
+	Cookie cookie;
 }
 
 //weapon caching
@@ -290,9 +291,7 @@ enum
 	Wep_CleanerCarbine,
 	Wep_Concheror,
 	Wep_CowMangler,
-#if defined MEMORY_PATCHES
 	Wep_CozyCamper,
-#endif	
 	Wep_CritCola,
 #if defined MEMORY_PATCHES
 	Wep_Crossbow,
@@ -379,7 +378,7 @@ enum struct Player {
 	// are there pending attrib changes?
 	bool change;
 	// made any changes in the pick menu
-	bool picked;
+	//bool picked;
 	// frame to force a respawn after
 	int respawn;
 	bool received_help_notice;
@@ -635,7 +634,7 @@ public void OnPluginStart() {
 	// Generic class features
 	ItemDefine("airblast", "Airblast_PreJI", CLASSFLAG_PYRO, Feat_Airblast);
 #if defined MEMORY_PATCHES
-	ItemDefine("flamethrower", "Flamethrower_PreBM", CLASSFLAG_PYRO | ITEMFLAG_MEMPATCH, Feat_Flamethrower);
+	ItemDefine("flamethrower", "Flamethrower_PreBM", CLASSFLAG_PYRO | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Feat_Flamethrower);
 #endif
 	ItemDefine("grenade", "Grenade_Pre2014", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED, Feat_Grenade);
 	ItemDefine("lunchbox", "Lunchbox_Pre2012", CLASSFLAG_HEAVY | ITEMFLAG_DISABLED | ITEMFLAG_UNPICKABLE, Feat_Lunchbox);
@@ -643,7 +642,7 @@ public void OnPluginStart() {
 	ItemDefine("miniramp", "Minigun_ramp_PreLW", CLASSFLAG_HEAVY | ITEMFLAG_UNPICKABLE, Feat_Minigun);
 	ItemDefine("sentry", "Sentry_PreTB", CLASSFLAG_ENGINEER | ITEMFLAG_UNPICKABLE, Feat_Sentry);
 #if defined MEMORY_PATCHES
-	ItemDefine("sniperrifles", "SniperRifle_PreLW", CLASSFLAG_SNIPER | ITEMFLAG_MEMPATCH, Feat_SniperRifle);
+	ItemDefine("sniperrifles", "SniperRifle_PreLW", CLASSFLAG_SNIPER | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Feat_SniperRifle);
 #endif
 	ItemDefine("stickybomb", "Stickybomb_PreLW", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_UNPICKABLE, Feat_Stickybomb);
 	ItemDefine("swords", "Swords_PreTB", CLASSFLAG_DEMOMAN | ITEMFLAG_UNPICKABLE, Feat_Sword);
@@ -696,7 +695,7 @@ public void OnPluginStart() {
 	ItemDefine("cowmangler", "CowMangler_Pre2013", CLASSFLAG_SOLDIER | ITEMFLAG_DISABLED, Wep_CowMangler);
 	ItemDefine("cozycamper", "CozyCamper_PreMYM", CLASSFLAG_SNIPER, Wep_CozyCamper);
 #if defined MEMORY_PATCHES
-	ItemDefine("crossbow", "CrusadersCrossbow_PreJI", CLASSFLAG_MEDIC | ITEMFLAG_MEMPATCH, Wep_Crossbow);
+	ItemDefine("crossbow", "CrusadersCrossbow_PreJI", CLASSFLAG_MEDIC | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Wep_Crossbow);
 #endif
 	ItemDefine("critcola", "CritCola_PreMYM", CLASSFLAG_SCOUT, Wep_CritCola);
 	ItemVariant(Wep_CritCola, "CritCola_PreJI");
@@ -709,10 +708,10 @@ public void OnPluginStart() {
 	ItemDefine("degreaser", "Degreaser_PreTB", CLASSFLAG_PYRO, Wep_Degreaser);
 	ItemDefine("directhit", "DirectHit_PreJI", CLASSFLAG_SOLDIER, Wep_DirectHit);
 #if defined MEMORY_PATCHES
-	ItemDefine("disciplinary", "Disciplinary_PreMYM", CLASSFLAG_SOLDIER | ITEMFLAG_MEMPATCH, Wep_Disciplinary);
+	ItemDefine("disciplinary", "Disciplinary_PreMYM", CLASSFLAG_SOLDIER | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Wep_Disciplinary);
 #endif
 #if defined MEMORY_PATCHES
-	ItemDefine("dragonfury", "DragonFury_Release", CLASSFLAG_PYRO | ITEMFLAG_MEMPATCH, Wep_DragonFury);
+	ItemDefine("dragonfury", "DragonFury_Release", CLASSFLAG_PYRO | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Wep_DragonFury);
 #else
 	ItemDefine("dragonfury", "DragonFury_Release_Patchless", CLASSFLAG_PYRO | ITEMFLAG_UNPICKABLE, Wep_DragonFury);
 #endif
@@ -736,7 +735,7 @@ public void OnPluginStart() {
 	ItemDefine("zatoichi", "Zatoichi_PreTB", CLASSFLAG_SOLDIER | CLASSFLAG_DEMOMAN, Wep_Zatoichi);
 	ItemDefine("huntsman", "Huntsman_Pre2013", CLASSFLAG_SNIPER | ITEMFLAG_UNPICKABLE, Wep_Huntsman);
 #if defined MEMORY_PATCHES
-	ItemDefine("ironbomber", "IronBomber_Pre2022", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_MEMPATCH, Wep_IronBomber);
+	ItemDefine("ironbomber", "IronBomber_Pre2022", CLASSFLAG_DEMOMAN | ITEMFLAG_DISABLED | ITEMFLAG_UNPICKABLE| ITEMFLAG_MEMPATCH, Wep_IronBomber);
 #endif
 	ItemDefine("jag", "Jag_PreTB", CLASSFLAG_ENGINEER, Wep_Jag);
 	ItemVariant(Wep_Jag, "Jag_PreGM");
@@ -767,7 +766,7 @@ public void OnPluginStart() {
 	ItemVariant(Wep_PocketPistol, "Pocket_PreBM");
 	ItemVariant(Wep_PocketPistol, "Pocket_PreJI");
 #if defined MEMORY_PATCHES
-	ItemDefine("quickfix", "Quickfix_PreTB", CLASSFLAG_MEDIC | ITEMFLAG_MEMPATCH, Wep_QuickFix);
+	ItemDefine("quickfix", "Quickfix_PreTB", CLASSFLAG_MEDIC | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Wep_QuickFix);
 #else
 	ItemDefine("quickfix", "Quickfix_PreMYM", CLASSFLAG_MEDIC, Wep_QuickFix);
 #endif
@@ -818,7 +817,7 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Vaccinator, "Vaccinator_PreGM");
 	ItemDefine("vitasaw", "VitaSaw_PreJI", CLASSFLAG_MEDIC, Wep_VitaSaw);
 	ItemDefine("warrior", "Warrior_PreTB", CLASSFLAG_HEAVY, Wep_WarriorSpirit);
-	ItemDefine("wrangler", "Wrangler_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_MEMPATCH, Wep_Wrangler);
+	ItemDefine("wrangler", "Wrangler_PreGM", CLASSFLAG_ENGINEER | ITEMFLAG_UNPICKABLE | ITEMFLAG_MEMPATCH, Wep_Wrangler);
 	ItemVariant(Wep_Wrangler, "Wrangler_PreLW");
 #if defined MEMORY_PATCHES
 	ItemVariant(Wep_Wrangler, "Wrangler_Release");
@@ -2218,6 +2217,12 @@ public void OnClientPutInServer(int client) {
 	SDKHook(client, SDKHook_OnTakeDamageAlive, SDKHookCB_OnTakeDamageAlive);
 	SDKHook(client, SDKHook_OnTakeDamagePost, SDKHookCB_OnTakeDamagePost);
 	SDKHook(client, SDKHook_WeaponSwitchPost, SDKHookCB_WeaponSwitchPost);
+}
+
+public void OnClientCookiesCached(int client) {
+	if (IsFakeClient(client) == false) {
+		ItemCookieLoad(client);
+	}
 }
 
 public void OnEntityCreated(int entity, const char[] class) {
@@ -5710,6 +5715,14 @@ Action Command_Pick(int client, int args) {
 			ReplyToCommand(client, "[SM] %t", "REVERT_PICK_INVALID_VARIANT", v_int);
 			return Plugin_Handled;
 		}
+
+		if (
+			AreClientCookiesCached(client) &&
+			items[idx].cookie != null
+		) {
+			items[idx].cookie.SetInt(client, v_int);
+		}
+
 		players[client].items_pick[idx] = v_int;
 		if (v_int > -1) {
 			ReplyToCommand(client, "[SM] %s -> %d: %t", key, v_int, items_desc[idx][v_int]);
@@ -5896,6 +5909,10 @@ void ItemFinalize() {
 		}
 
 		items[idx].cvar = CreateConVar(cvar_name, items[idx].flags & ITEMFLAG_DISABLED == 0 ? "1" : "0", cvar_desc, FCVAR_NOTIFY, true, 0.0, true, float(items[idx].num_variants + 1));
+
+		if (items[idx].flags & ITEMFLAG_UNPICKABLE == 0) {
+			items[idx].cookie = new Cookie(items[idx].key, "", CookieAccess_Protected);
+		}
 #if defined MEMORY_PATCHES
 		if (items[idx].flags & ITEMFLAG_MEMPATCH) {
 			items[idx].cvar.AddChangeHook(OnServerCvarChanged);
@@ -5951,10 +5968,7 @@ int GetItemVariant(int wep_enum, int client = 0) {
  * @return				True if an item revert is pickable, false otherwise.
  */
 bool ItemIsPickable(int wep_enum) {
-	if (
-		items[wep_enum].flags & ITEMFLAG_UNPICKABLE ||
-		items[wep_enum].flags & ITEMFLAG_MEMPATCH
-	)
+	if (items[wep_enum].flags & ITEMFLAG_UNPICKABLE)
 		return false;
 
 	char buf[16];
@@ -6016,6 +6030,20 @@ void PlayerRemoveEquipment(int client)
 	for (int i = 0; i < TF2Util_GetPlayerWearableCount(client); i++)
 	{
 		TF2_RemoveWearable(client, TF2Util_GetPlayerWearable(client, i));
+	}
+}
+
+void ItemCookieLoad(int client) {
+	for (int i = 0; i < NUM_ITEMS; i++) {
+		if (items[i].cookie != null) {
+			players[client].items_pick[i] = items[i].cookie.GetInt(client, GetItemVariant(i));
+		}
+	}
+
+	ItemPlayerApply(client);
+
+	if (IsClientInGame(client) == false) {
+		players[client].change = false;
 	}
 }
 
