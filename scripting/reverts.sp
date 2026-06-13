@@ -2560,22 +2560,22 @@ public void ApplyRevertsToItem(int entity) {
 			}
 		}
 		case 38, 457, 1000: {
+			// common
+			if (ItemIsEnabled(Wep_Axtinguisher)) {
+				TF2Attrib_SetByDefIndex(entity, 1, 1.00); // damage penalty
+				TF2Attrib_SetByDefIndex(entity, 21, 0.50); // dmg penalty vs nonburning
+				TF2Attrib_SetByDefIndex(entity, 772, 1.00); // single wep holster time increased
+				TF2Attrib_SetByDefIndex(entity, 2067, 0.0); // attack minicrits and consumes burning
+			}
+			// specific
 			switch (GetItemVariant(Wep_Axtinguisher)) {
 				case 0: {
-					TF2Attrib_SetByDefIndex(entity, 1, 1.00); // damage penalty
 					TF2Attrib_SetByDefIndex(entity, 15, 1.0); // crit mod disabled
 					TF2Attrib_SetByDefIndex(entity, 20, 1.0); // crit vs burning players
-					TF2Attrib_SetByDefIndex(entity, 21, 0.50); // dmg penalty vs nonburning
 					TF2Attrib_SetByDefIndex(entity, 22, 1.0); // no crit vs nonburning
-					TF2Attrib_SetByDefIndex(entity, 772, 1.00); // single wep holster time increased
-					TF2Attrib_SetByDefIndex(entity, 2067, 0.0); // attack minicrits and consumes burning
 				}
 				case 1: {
-					TF2Attrib_SetByDefIndex(entity, 1, 1.00); // damage penalty
-					TF2Attrib_SetByDefIndex(entity, 21, 0.50); // dmg penalty vs nonburning
 					TF2Attrib_SetByDefIndex(entity, 638, 1.0); // axtinguisher properties
-					TF2Attrib_SetByDefIndex(entity, 772, 1.00); // single wep holster time increased
-					TF2Attrib_SetByDefIndex(entity, 2067, 0.0); // attack minicrits and consumes burning
 				}
 			}
 		}
@@ -2596,21 +2596,21 @@ public void ApplyRevertsToItem(int entity) {
 			}
 		}
 		case 40, 1146: {
+			// common for non-airblast
+			if (GetItemVariant(Wep_Backburner) >= 1) {
+				TF2Attrib_SetByDefIndex(entity, 170, 1.0); // +0% airblast cost
+				TF2Attrib_SetByDefIndex(entity, 356, 1.0); // No airblast
+				TF2Attrib_SetByDefIndex(entity, 783, 0.0); // Extinguishing teammates restores 0 health
+			}
 			switch (GetItemVariant(Wep_Backburner)) {
 				case 0: {
 					TF2Attrib_SetByDefIndex(entity, 2, 1.1); // +10% damage bonus
 				}
 				case 1: {
 					TF2Attrib_SetByDefIndex(entity, 2, 1.2); // +20% damage bonus
-					TF2Attrib_SetByDefIndex(entity, 170, 1.0); // +0% airblast cost
-					TF2Attrib_SetByDefIndex(entity, 356, 1.0); // No airblast
-					TF2Attrib_SetByDefIndex(entity, 783, 0.0); // Extinguishing teammates restores 0 health
 				}
 				case 2: {
 					TF2Attrib_SetByDefIndex(entity, 26, 50.0); // +50 max health on wearer
-					TF2Attrib_SetByDefIndex(entity, 170, 1.0); // +0% airblast cost
-					TF2Attrib_SetByDefIndex(entity, 356, 1.0); // No airblast
-					TF2Attrib_SetByDefIndex(entity, 783, 0.0); // Extinguishing teammates restores 0 health
 				}
 			}
 		}
@@ -2642,18 +2642,15 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 357, 1.40); // +40% buff duration (hidden)
 		}}
 		case 232: {
-			switch (GetItemVariant(Wep_Bushwacka)) {
-				case 0: {
-					TF2Attrib_SetByDefIndex(entity, 15, 1.0); // random crits enabled
+			// common
+			if (ItemIsEnabled(Wep_Bushwacka)) {
 					TF2Attrib_SetByDefIndex(entity, 61, 1.20); // 20% fire damage vulnerability on wearer
 					TF2Attrib_SetByDefIndex(entity, 128, 0.0); // When weapon is active:
 					TF2Attrib_SetByDefIndex(entity, 412, 1.00); // 0% damage vulnerability on wearer
 				}
-				case 1: {
-					TF2Attrib_SetByDefIndex(entity, 61, 1.20); // 20% fire damage vulnerability on wearer
-					TF2Attrib_SetByDefIndex(entity, 128, 0.0); // When weapon is active:
-					TF2Attrib_SetByDefIndex(entity, 412, 1.00); // 0% damage vulnerability on wearer
-				}
+			// specific
+			if (GetItemVariant(Wep_Bushwacka) == 0) {
+				TF2Attrib_SetByDefIndex(entity, 15, 1.0); // random crits enabled
 			}
 		}
 		case 307: { if (ItemIsEnabled(Wep_Caber)) {
@@ -2664,18 +2661,19 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 103, 1.50); // projectile speed increased
 		}}
 		case 751: {
+			// common
+			if (ItemIsEnabled(Wep_CleanerCarbine)) {
+				TF2Attrib_SetByDefIndex(entity, 5, 1.35); // 35% slower firing speed
+				TF2Attrib_SetByDefIndex(entity, 779, 0.0); // minicrit boost when charged
+				TF2Attrib_SetByDefIndex(entity, 780, 0.0); // minicrit boost charge rate
+			}
+			// specific
 			switch (GetItemVariant(Wep_CleanerCarbine)) {
 				case 0: {
-					TF2Attrib_SetByDefIndex(entity, 5, 1.35); // 35% slower firing speed
-					TF2Attrib_SetByDefIndex(entity, 31, 3.0); // 3 sec crits on kill
-					TF2Attrib_SetByDefIndex(entity, 779, 0.0); // minicrit on charge
-					TF2Attrib_SetByDefIndex(entity, 780, 0.0); // gain charge on hit
+					TF2Attrib_SetByDefIndex(entity, 31, 3.0); // On Kill: 3 seconds of 100% critical chance
 				}
 				case 1: {
-					TF2Attrib_SetByDefIndex(entity, 5, 1.35); // 35% slower firing speed
-					TF2Attrib_SetByDefIndex(entity, 613, 8.0); // 8 sec minicrits on kill
-					TF2Attrib_SetByDefIndex(entity, 779, 0.0); // minicrit on charge
-					TF2Attrib_SetByDefIndex(entity, 780, 0.0); // gain charge on hit
+					TF2Attrib_SetByDefIndex(entity, 613, 8.0); // On Kill: Gain Mini-crits for 8 seconds
 				}
 			}
 		}
@@ -2690,16 +2688,14 @@ public void ApplyRevertsToItem(int entity) {
 		case 441: { if (ItemIsEnabled(Wep_CowMangler)) {
 			TF2Attrib_SetByDefIndex(entity, 1, 0.90); // -10% damage penalty
 			TF2Attrib_SetByDefIndex(entity, 96, 1.05); // 5% slower reload time
-			TF2Attrib_SetByDefIndex(entity, 288, 1.0); // Cannot be crit boosted
+			TF2Attrib_SetByDefIndex(entity, 288, 1.0); // Cannot be crit boosted (does nothing, handled elsewhere)
 			TF2Attrib_SetByDefIndex(entity, 335, 1.25); // +25% clip size
 			TF2Attrib_SetByDefIndex(entity, 869, 0.0); // Minicrits whenever it would normally crit
-			// no crit boost attribute fix handled elsewhere
 		}}
 		case 163: {
 			switch (GetItemVariant(Wep_CritCola)) {
 				case 0, 1: {
-					// +25% or +10% damage vulnerability while under the effect, depending on variant
-					TF2Attrib_SetByDefIndex(entity, 798, 1.10);
+					TF2Attrib_SetByDefIndex(entity, 798, 1.10); // +10% damage vulnerability while under the effect
 					TF2Attrib_SetByDefIndex(entity, 814, 0.0); // no mark-for-death on attack
 				}
 				case 2: {
@@ -2709,19 +2705,16 @@ public void ApplyRevertsToItem(int entity) {
 			}
 		}
 		case 231: {
-			switch (GetItemVariant(Wep_Darwin)) {
-				case 0: {
+			// common
+			if (ItemIsEnabled(Wep_Darwin)) {
 					TF2Attrib_SetByDefIndex(entity, 26, 25.0); // +25 max health on wearer
 					TF2Attrib_SetByDefIndex(entity, 60, 1.0); // +0% fire damage resistance on wearer
+				TF2Attrib_SetByDefIndex(entity, 527, 0.0); // Immune to the effects of afterburn (not)
+			}
+			// specific
+			if (GetItemVariant(Wep_Darwin) == 0) {
 					TF2Attrib_SetByDefIndex(entity, 65, 1.20); // 20% explosive damage vulnerability on wearer
 					TF2Attrib_SetByDefIndex(entity, 66, 0.85); // +15% bullet damage resistance on wearer
-					TF2Attrib_SetByDefIndex(entity, 527, 0.0); // remove afterburn immunity
-				}
-				case 1: {
-					TF2Attrib_SetByDefIndex(entity, 26, 25.0); // +25 max health on wearer
-					TF2Attrib_SetByDefIndex(entity, 60, 1.0); // +0% fire damage resistance on wearer
-					TF2Attrib_SetByDefIndex(entity, 527, 0.0); // remove afterburn immunity
-				}
 			}
 		}
 		case 215: { if (ItemIsEnabled(Wep_Degreaser)) {
@@ -2775,25 +2768,20 @@ public void ApplyRevertsToItem(int entity) {
 			}
 		}
 		case 331: {
+			// common (also pre-Jungle Inferno)
+			if (ItemIsEnabled(Wep_FistsSteel)) {
+					TF2Attrib_SetByDefIndex(entity, 853, 1.0); // mult patient overheal penalty active
+					TF2Attrib_SetByDefIndex(entity, 854, 1.0); // mult health fromhealers penalty active
+				}
+			// specific
 			switch (GetItemVariant(Wep_FistsSteel)) {
-				case 0: {
-				// Pre-Inferno FoS
-					TF2Attrib_SetByDefIndex(entity, 853, 1.0); // mult patient overheal penalty active
-					TF2Attrib_SetByDefIndex(entity, 854, 1.0); // mult health fromhealers penalty active
+				case 1: { // Pre-Tough Break
+					TF2Attrib_SetByDefIndex(entity, 177, 1.2); // 20% longer weapon switch
+					TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased
 				}
-				case 1: {
-				// Pre-Tough Break FoS
-					TF2Attrib_SetByDefIndex(entity, 177, 1.2); // 20% longer weapon switch; mult_deploy_time
-					TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased; mult_switch_from_wep_deploy_time
-					TF2Attrib_SetByDefIndex(entity, 853, 1.0); // mult patient overheal penalty active
-					TF2Attrib_SetByDefIndex(entity, 854, 1.0); // mult health fromhealers penalty active
-				}
-				case 2: {
-				// Release FoS
-					TF2Attrib_SetByDefIndex(entity, 205, 0.4); // -60% damage from ranged sources while active; dmg_from_ranged
-					TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased; mult_switch_from_wep_deploy_time
-					TF2Attrib_SetByDefIndex(entity, 853, 1.0); // mult patient overheal penalty active
-					TF2Attrib_SetByDefIndex(entity, 854, 1.0); // mult health fromhealers penalty active
+				case 2: { // Release
+					TF2Attrib_SetByDefIndex(entity, 205, 0.4); // -60% damage from ranged sources while active
+					TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased
 				}
 			}
 		}
@@ -2801,20 +2789,20 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 5, 1.0); // fire rate penalty
 		}}
 		case 239, 1084, 1100: {
+			// common
+			if (ItemIsEnabled(Wep_GRU)) {
+				TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased
+				TF2Attrib_SetByDefIndex(entity, 855, 0.0); // mod maxhealth drain rate
+			}
+			// specific
 			switch (GetItemVariant(Wep_GRU)) {
-				case 0: {
-					// Pre-Tough Break
+				case 0: { // Pre-Tough Break
 					TF2Attrib_SetByDefIndex(entity, 1, 0.75); // damage penalty
 					TF2Attrib_SetByDefIndex(entity, 414, 3.0); // self mark for death
-					TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased
-					TF2Attrib_SetByDefIndex(entity, 855, 0.0); // mod maxhealth drain rate
 				}
-				case 1: {
-					// Pre-Pyromania
+				case 1: { // Pre-Pyromania
 					TF2Attrib_SetByDefIndex(entity, 1, 0.50); // damage penalty
 					TF2Attrib_SetByDefIndex(entity, 191, -6.0); // active health degen
-					TF2Attrib_SetByDefIndex(entity, 772, 1.0); // single wep holster time increased
-					TF2Attrib_SetByDefIndex(entity, 855, 0.0); // mod maxhealth drain rate
 				}
 			}
 		}
@@ -2846,19 +2834,17 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 135, 1.00); // rocket jump damage reduction
 		}}
 		case 308: {
-			switch (GetItemVariant(Wep_LochLoad)) {
-				case 0: {
-					TF2Attrib_SetByDefIndex(entity, 2, 1.20); // damage bonus
-					TF2Attrib_SetByDefIndex(entity, 137, 1.00); // dmg bonus vs buildings
-				}
-				case 1: {
+			// common
+			if (ItemIsEnabled(Wep_LochLoad)) {
 					TF2Attrib_SetByDefIndex(entity, 2, 1.20); // +20% damage bonus
+				TF2Attrib_SetByDefIndex(entity, 137, 1.00); // +0% damage vs buildings
+			}
+			// specific
+			if (GetItemVariant(Wep_LochLoad) == 1) {
 					TF2Attrib_SetByDefIndex(entity, 3, 0.50); // -50% clip size
 					TF2Attrib_SetByDefIndex(entity, 100, 1.00); // -0% explosion radius
-					TF2Attrib_SetByDefIndex(entity, 137, 1.00); // +0% damage vs buildings
 					TF2Attrib_SetByDefIndex(entity, 207, 1.25); // +25% damage to self
 					TF2Attrib_SetByDefIndex(entity, 681, 0.00); // grenade no spin
-				}
 			}
 		}
 #if defined MEMORY_PATCHES
@@ -2929,26 +2915,24 @@ public void ApplyRevertsToItem(int entity) {
 			}
 		}
 		case 588: { if (GetItemVariant(Wep_Pomson) == 1) {
-			TF2Attrib_SetByDefIndex(entity, 283, 1.0); // energy_weapon_penetration; NOTE: turns pomson projectile into bison projectile
+			TF2Attrib_SetByDefIndex(entity, 283, 1.0); // Projectile penetrates enemy targets
+			// NOTE: turns pomson projectile into bison projectile
 		}}
 		case 214: {
-			switch (GetItemVariant(Wep_Powerjack)) {
-				case 0: {
-					// Pre-Gun Mettle Powerjack (pre-2015)
+			// common (also pre-Gun Mettle)
+			if (ItemIsEnabled(Wep_Powerjack)) {
 					TF2Attrib_SetByDefIndex(entity, 180, 75.0); // +75 health restored on kill
 				}
-				case 1: {
-					// Release Powerjack (2010)
+			// specific
+			switch (GetItemVariant(Wep_Powerjack)) {
+				case 1: { // Release Powerjack (2010)
 					TF2Attrib_SetByDefIndex(entity, 2, 1.25); // +25% damage bonus
 					TF2Attrib_SetByDefIndex(entity, 15, 0.0); // No random critical hits
 					TF2Attrib_SetByDefIndex(entity, 107, 1.0); // +0% faster move speed on wearer
-					TF2Attrib_SetByDefIndex(entity, 180, 75.0); // +75 health restored on kill
 					TF2Attrib_SetByDefIndex(entity, 412, 1.0); // 0% damage vulnerability on wearer
 				}
-				case 2: {
-					// Hatless Update Powerjack (2011 to 2013)
+				case 2: { // Pre-Summer 2013 Powerjack
 					TF2Attrib_SetByDefIndex(entity, 107, 1.0); // +0% faster move speed on wearer
-					TF2Attrib_SetByDefIndex(entity, 180, 75.0); // +75 health restored on kill
 					TF2Attrib_SetByDefIndex(entity, 206, 1.2); // +20% damage from melee sources while active
 					TF2Attrib_SetByDefIndex(entity, 412, 1.0); // 0% damage vulnerability on wearer
 				}
@@ -2979,35 +2963,39 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 670, 0.50); // Max charge time decreased by 50%
 		}}
 		case 997: {
+			// common
+			if (ItemIsEnabled(Wep_RescueRanger)) {
+				TF2Attrib_SetByDefIndex(entity, 880, 0.0); // 0-to-1 health-to-metal ratio when repairing buildings
+			}
+			// specific
 			switch (GetItemVariant(Wep_RescueRanger)) {
 				case 0: {
 					TF2Attrib_SetByDefIndex(entity, 469, 130.0); // ranged pickup metal cost
 					TF2Attrib_SetByDefIndex(entity, 474, 75.0); // repair bolt healing amount
-					TF2Attrib_SetByDefIndex(entity, 880, 0.0); // repair health to metal ratio DISPLAY ONLY
-				}
-				case 1: {
-					TF2Attrib_SetByDefIndex(entity, 880, 0.0); // repair health to metal ratio DISPLAY ONLY
 				}
 				case 2: {
 					TF2Attrib_SetByDefIndex(entity, 474, 75.0); // repair bolt healing amount
-					TF2Attrib_SetByDefIndex(entity, 880, 0.0); // repair health to metal ratio DISPLAY ONLY
 				}
 			}
 		}
 		case 415: {
-			switch (GetItemVariant(Wep_ReserveShooter)) {
-				case 0: {
+			// common for variants before Tough Break
+			if (
+				ItemIsEnabled(Wep_ReserveShooter) &&
+				GetItemVariant(Wep_ReserveShooter) != 1
+			) {
 					TF2Attrib_SetByDefIndex(entity, 114, 0.0); // mod mini-crit airborne
 					TF2Attrib_SetByDefIndex(entity, 178, 0.85); // 15% faster weapon switch
-					TF2Attrib_SetByDefIndex(entity, 265, 5.0); // mod mini-crit airborne deploy
 					TF2Attrib_SetByDefIndex(entity, 547, 1.0); // This weapon deploys 0% faster
+			}
+			// specific
+			switch (GetItemVariant(Wep_ReserveShooter)) {
+				case 0: {
+					TF2Attrib_SetByDefIndex(entity, 265, 5.0); // mod mini-crit airborne deploy
 				}
 				case 2: {
 					TF2Attrib_SetByDefIndex(entity, 3, 0.50); // -50% clip size
-					TF2Attrib_SetByDefIndex(entity, 114, 0.0); // mod mini-crit airborne
-					TF2Attrib_SetByDefIndex(entity, 178, 0.85); // 15% faster weapon switch
 					TF2Attrib_SetByDefIndex(entity, 265, 3.0); // mod mini-crit airborne deploy
-					TF2Attrib_SetByDefIndex(entity, 547, 1.0); // This weapon deploys 0% faster
 				}
 			}
 		}
@@ -3051,24 +3039,16 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 614, 1.0); // no metal from dispensers while active
 		}}
 		case 220: {
-			switch (GetItemVariant(Wep_Shortstop)) {
-				case 0: {
-					// Pre-Manniversary Shortstop
-					TF2Attrib_SetByDefIndex(entity, 241, 1.0); // reload time increased hidden
-					TF2Attrib_SetByDefIndex(entity, 534, 1.0); // airblast vulnerability multiplier hidden
-					TF2Attrib_SetByDefIndex(entity, 535, 1.0); // damage force increase hidden
-				}
-				case 1: {
-					// Release Shortstop
-					TF2Attrib_SetByDefIndex(entity, 182, 0.5); // On Hit: Slow target movement by 40% for 0.5s
-					TF2Attrib_SetByDefIndex(entity, 241, 1.0); // reload time increased hidden
-					TF2Attrib_SetByDefIndex(entity, 534, 1.0); // airblast vulnerability multiplier hidden
-					TF2Attrib_SetByDefIndex(entity, 535, 1.0); // damage force increase hidden
-				}
-			}
-
+			// common (also pre-Manniversary Shortstop)
 			if (ItemIsEnabled(Wep_Shortstop)) {
+					TF2Attrib_SetByDefIndex(entity, 241, 1.0); // reload time increased hidden
+					TF2Attrib_SetByDefIndex(entity, 534, 1.0); // airblast vulnerability multiplier hidden
+					TF2Attrib_SetByDefIndex(entity, 535, 1.0); // damage force increase hidden
 				SetEntProp(entity, Prop_Send, "m_iPrimaryAmmoType", 2);
+				}
+					// Release Shortstop
+			if (GetItemVariant(Wep_Shortstop) == 1) {
+					TF2Attrib_SetByDefIndex(entity, 182, 0.5); // On Hit: Slow target movement by 40% for 0.5s
 			}
 		}
 		case 230: {
@@ -3129,6 +3109,14 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 527, 1.0); // afterburn immunity
 		}}
 		case 424: {
+			// common
+			if (ItemIsEnabled(Wep_Tomislav)) {
+				TF2Attrib_SetByDefIndex(entity, 128, 1.0); // When weapon is active: (necessary for attrib 549)
+				TF2Attrib_SetByDefIndex(entity, 348, 1.0 / 1.2); // fire rate penalty HIDDEN; mult_postfiredelay; changes fire rate AND sound pitch
+				TF2Attrib_SetByDefIndex(entity, 549, 1.2); // halloween fire rate bonus; hwn_mult_postfiredelay; changes ONLY fire rate;
+				// NOTE: sound adjustment attributes might likely not work nicely with MvM; hwn_mult_postfiredelay is an unused attribute so there shouldn't be any issues
+			}
+			// specific
 			switch (GetItemVariant(Wep_Tomislav)) {
 				case 1: { // Pre-Pyromania
 					TF2Attrib_SetByDefIndex(entity, 87, 0.60); // 40% faster spin up time
@@ -3139,27 +3127,17 @@ public void ApplyRevertsToItem(int entity) {
 					TF2Attrib_SetByDefIndex(entity, 106, 1.0); // 0% more accurate
 				}
 			}
-
-			if (ItemIsEnabled(Wep_Tomislav)) {
-				TF2Attrib_SetByDefIndex(entity, 128, 1.0); // When weapon is active: (necessary for attrib 549)
-				TF2Attrib_SetByDefIndex(entity, 348, 1.0 / 1.2); // fire rate penalty HIDDEN; mult_postfiredelay; changes fire rate AND sound pitch
-				TF2Attrib_SetByDefIndex(entity, 549, 1.2); // halloween fire rate bonus; hwn_mult_postfiredelay; changes ONLY fire rate;
-				// NOTE: sound adjustment attributes might likely not work nicely with MvM; hwn_mult_postfiredelay is an unused attribute so there shouldn't be any issues
-			}
 		}
 		case 1099: {
-			switch (GetItemVariant(Wep_TideTurner)) {
-				case 0: {
+			// common
+			if (ItemIsEnabled(Wep_TideTurner)) {
 					TF2Attrib_SetByDefIndex(entity, 60, 0.75); // 25% fire damage resistance on wearer
 					TF2Attrib_SetByDefIndex(entity, 64, 0.75); // 25% explosive damage resistance on wearer
 					TF2Attrib_SetByDefIndex(entity, 676, 0.0); // Taking damage while shield charging reduces remaining charging time
 				}
-				case 1: {
-					TF2Attrib_SetByDefIndex(entity, 60, 0.75); // 25% fire damage resistance on wearer
-					TF2Attrib_SetByDefIndex(entity, 64, 0.75); // 25% explosive damage resistance on wearer
-					TF2Attrib_SetByDefIndex(entity, 676, 0.0); // Taking damage while shield charging reduces remaining charging time
+			// specific
+			if (GetItemVariant(Wep_TideTurner) == 1) {
 					TF2Attrib_SetByDefIndex(entity, 2034, 1.0); // Melee kills refill 100% of your charge meter.
-				}
 			}
 		}
 		case 171: { if (ItemIsEnabled(Wep_TribalmansShiv)) {
@@ -3193,8 +3171,6 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 15, 1.0); // crit mod disabled
 			TF2Attrib_SetByDefIndex(entity, 220, 0.0); // restore health on kill
 			TF2Attrib_SetByDefIndex(entity, 226, 0.0); // honorbound
-			//this version of zatoichi was not considered a sword
-			//therefore, do not apply sword logic here
 			TF2Attrib_SetByDefIndex(entity, 781, 0.0); // is a sword
 		}}
 	}
