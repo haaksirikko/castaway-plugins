@@ -67,6 +67,7 @@ public Plugin myinfo = {
 	url = PLUGIN_URL
 };
 
+#define MAX_ENTITIES 2048
 #define MAX_VARIANTS 3 // not including base version, increase as needed
 #define BALANCE_CIRCUIT_METAL 15
 #define BALANCE_CIRCUIT_DAMAGE 20.0
@@ -441,7 +442,7 @@ Address CTakeDamageInfo_m_flDamage;
 Address CTakeDamageInfo_m_iDamageCustom;
 
 Player players[MAXPLAYERS+1];
-Entity entities[2048];
+Entity entities[MAX_ENTITIES];
 int frame;
 Handle hudsync;
 // Menu menu_pick;
@@ -631,7 +632,7 @@ public void OnPluginStart() {
 	int idx;
 	GameData conf;
 	bool hook_fail = false;
-	// char tmp[64];
+	char tmp[64];
 
 	CCheckTrie();
 
@@ -1221,6 +1222,13 @@ public void OnPluginStart() {
 		if (IsClientInGame(idx)) {
 			OnClientPutInServer(idx);
 			if (IsPlayerAlive(idx)) CacheWeapons(idx);
+		}
+	}
+
+	for (idx = MaxClients + 1; idx < MAX_ENTITIES; idx++) {
+		if (IsValidEntity(idx)) {
+			GetEntityClassname(idx, tmp, sizeof(tmp));
+			OnEntityCreated(idx, tmp);
 		}
 	}
 }
@@ -2093,7 +2101,7 @@ public void OnClientPutInServer(int client) {
 }
 
 public void OnEntityCreated(int entity, const char[] class) {
-	if (entity < 0 || entity >= 2048) {
+	if (entity < 0 || entity >= MAX_ENTITIES) {
 		// sourcemod calls this with entrefs for non-networked ents ??
 		return;
 	}
@@ -2208,7 +2216,7 @@ public void OnEntityCreated(int entity, const char[] class) {
 }
 
 public void OnEntityDestroyed(int entity) {
-	if (entity < 0 || entity >= 2048) {
+	if (entity < 0 || entity >= MAX_ENTITIES) {
 		return;
 	}
 
@@ -5880,7 +5888,7 @@ bool DoShortCircuitProjectileRemoval(int owner, int entity, int base_amount, int
 	GetClientEyeAngles(owner, angles1);
 
 	// scan for entities to hit
-	for (idx = 1; idx < 2048; idx++) {
+	for (idx = 1; idx < MAX_ENTITIES; idx++) {
 		if (IsValidEntity(idx)) {
 			GetEntityClassname(idx, class, sizeof(class));
 
