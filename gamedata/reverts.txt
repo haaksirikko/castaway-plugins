@@ -357,6 +357,11 @@
 				"windows"	"438"
 				"linux"		"445"
 			}
+			"CTFWeaponBaseGrenadeProj::GetDamageRadius"
+			{
+				"windows"	"242"
+				"linux"		"243"
+			}
 
 			// ╔══════════════════════════════════════════════╗
 			// ║       Private/Protected Member Offsets       ║
@@ -745,6 +750,13 @@
 			"CTFWeaponBase::GetSpeedMod"
 			{
 				"offset"	"CTFWeaponBase::GetSpeedMod"
+				"hooktype"	"entity"
+				"this"		"entity"
+				"return"	"float"
+			}
+			"CTFWeaponBaseGrenadeProj::GetDamageRadius"
+			{
+				"offset"	"CTFWeaponBaseGrenadeProj::GetDamageRadius"
 				"hooktype"	"entity"
 				"this"		"entity"
 				"return"	"float"
