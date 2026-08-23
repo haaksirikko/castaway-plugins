@@ -392,6 +392,7 @@ DynamicHook dhook_CTFPlayer_TakeHealth;
 DynamicHook dhook_CBaseCombatWeapon_Deploy;
 DynamicHook dhook_CBaseCombatWeapon_Holster;
 DynamicHook dhook_CTFWeaponBase_GetSpeedMod;
+DynamicHook dhook_CTFWeaponBaseGrenadeProj_GetDamageRadius;
 
 DynamicDetour dhook_CTFPlayer_CanDisguise;
 DynamicDetour dhook_CTFPlayer_CalculateMaxSpeed;
@@ -977,6 +978,7 @@ public void OnPluginStart() {
 		dhook_CBaseCombatWeapon_Deploy = DynamicHook.FromConf(conf, "CBaseCombatWeapon::Deploy");
 		dhook_CBaseCombatWeapon_Holster = DynamicHook.FromConf(conf, "CBaseCombatWeapon::Holster");
 		dhook_CTFWeaponBase_GetSpeedMod = DynamicHook.FromConf(conf, "CTFWeaponBase::GetSpeedMod");
+		dhook_CTFWeaponBaseGrenadeProj_GetDamageRadius = DynamicHook.FromConf(conf, "CTFWeaponBaseGrenadeProj::GetDamageRadius");
 
 		dhook_CTFPlayer_CanDisguise = DynamicDetour.FromConf(conf, "CTFPlayer::CanDisguise");
 		dhook_CTFPlayer_CalculateMaxSpeed = DynamicDetour.FromConf(conf, "CTFPlayer::TeamFortress_CalculateMaxSpeed");
@@ -1124,6 +1126,7 @@ public void OnPluginStart() {
 	VALIDATE_HANDLE(dhook_CBaseCombatWeapon_Deploy);
 	VALIDATE_HANDLE(dhook_CBaseCombatWeapon_Holster);
 	VALIDATE_HANDLE(dhook_CTFWeaponBase_GetSpeedMod);
+	VALIDATE_HANDLE(dhook_CTFWeaponBaseGrenadeProj_GetDamageRadius);
 
 	VALIDATE_HANDLE(dhook_CTFPlayer_CanDisguise);
 	VALIDATE_HANDLE(dhook_CTFPlayer_CalculateMaxSpeed);
@@ -2130,6 +2133,10 @@ public void OnEntityCreated(int entity, const char[] class) {
 	}
 	else if (StrEqual(class, "tf_projectile_pipe")) {
 		dhook_CTFWeaponBaseGrenadeProj_GetEnemy.HookEntity(Hook_Pre, entity, DHookCallback_CTFWeaponBaseGrenadeProj_GetEnemy_Pre);
+		dhook_CTFWeaponBaseGrenadeProj_GetDamageRadius.HookEntity(Hook_Post, entity, DHookCallback_CTFWeaponBaseGrenadeProj_GetDamageRadius_Post);
+	}
+	else if (StrEqual(class, "tf_projectile_pipe_remote")) {
+		dhook_CTFWeaponBaseGrenadeProj_GetDamageRadius.HookEntity(Hook_Post, entity, DHookCallback_CTFWeaponBaseGrenadeProj_GetDamageRadius_Post);
 	}
 	else if (StrEqual(class, "tf_projectile_healing_bolt")) {
 		dhook_CTFProjectile_HealingBolt_ImpactTeamPlayer.HookEntity(Hook_Pre, entity, DHookCallback_CTFProjectile_HealingBolt_ImpactTeamPlayer_Pre);
@@ -3125,14 +3132,7 @@ public void ApplyRevertsToItem(int entity) {
 			StrEqual(class, "tf_weapon_cannon")
 		)
 	) {
-		TF2Attrib_SetByDefIndex(entity, 99, 159.0 / 146.0); // +8.9% explosion radius
-		TF2Attrib_SetByDefIndex(entity, 476, 1.12); // +12% damage bonus
-	}
-	else if (
-		ItemIsEnabled(Feat_Stickybomb) &&
-		StrEqual(class, "tf_weapon_pipebomblauncher")
-	) {
-		TF2Attrib_SetByDefIndex(entity, 99, 159.0 / 146.0); // +8.9% explosion radius
+		TF2Attrib_SetByDefIndex(entity, 476, 112.0 / 100.0); // +12% damage bonus
 	}
 	else if (
 		ItemIsEnabled(Feat_Sword) &&
@@ -7294,6 +7294,21 @@ MRESReturn DHookCallback_CTFWeaponBaseGrenadeProj_GetEnemy_Pre(int entity, DHook
 		// return NULL such that the radius damage function doesn't deal full damage and varies it by hit location
 		returnValue.Value = Address_Null;
 		return MRES_Supercede;
+	}
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFWeaponBaseGrenadeProj_GetDamageRadius_Post(int entity, DHookReturn returnValue) {
+	char class[64];
+	GetEntityClassname(entity, class, sizeof(class));
+	if (
+		ItemIsEnabled(Feat_Grenade) &&
+		StrEqual(class, "tf_projectile_pipe") ||
+		ItemIsEnabled(Feat_Stickybomb) &&
+		StrEqual(class, "tf_projectile_pipe_remote")
+	) {
+		returnValue.Value = view_as<float>(returnValue.Value) * 159.0 / 146.0;
+		return MRES_Override;
 	}
 	return MRES_Ignored;
 }
