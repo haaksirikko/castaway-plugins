@@ -1182,6 +1182,7 @@ public void OnPluginStart() {
 	dhook_CTFProjectile_Arrow_BuildingHealingArrow.Enable(Hook_Pre, DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Pre);
 	dhook_CTFProjectile_Arrow_BuildingHealingArrow.Enable(Hook_Post, DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Post);
 	dhook_CTFPlayer_RegenThink.Enable(Hook_Pre, DHookCallback_CTFPlayer_RegenThink_Pre);
+	dhook_CTFPlayer_RegenThink.Enable(Hook_Post, DHookCallback_CTFPlayer_RegenThink_Post);
 	dhook_CTFPlayer_GiveAmmo.Enable(Hook_Pre, DHookCallback_CTFPlayer_GiveAmmo_Pre);
 	dhook_CTFLunchBox_DrainAmmo.Enable(Hook_Pre, DHookCallback_CTFLunchBox_DrainAmmo_Pre);
 	dhook_CTFPlayer_OnTauntSucceeded.Enable(Hook_Post, DHookCallback_CTFPlayer_OnTauntSucceeded_Post);
@@ -6386,20 +6387,15 @@ MRESReturn DHookCallback_CTFPlayer_AddToSpyKnife_Pre(int entity, DHookReturn ret
 MRESReturn DHookCallback_CTFPlayer_RegenThink_Pre(int client) {
 	int weapon;
 	bool full_regen = false;
-	float regen_amount;
-	float time_since_damage;
-	float regen_scale;
 
 	// Don't proceed if in MvM
 	if (playing_mvm) return MRES_Ignored;
 
-	if (
-		client > 0 &&
-		client <= MaxClients
-	) {
+	if (client >= 1 && client <= MaxClients) {
 		if (
 			ItemIsEnabled(Wep_Concheror) &&
-			player_weapons[client][Wep_Concheror]
+			TF2_GetPlayerClass(client) == TFClass_Soldier &&
+			TF2Attrib_HookValueFloat(0.0, "add_health_regen", client) != 0.0
 		) {
 			full_regen = true;
 		}
@@ -6407,41 +6403,32 @@ MRESReturn DHookCallback_CTFPlayer_RegenThink_Pre(int client) {
 		weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
 		if (
 			ItemIsEnabled(Wep_Amputator) &&
-			player_weapons[client][Wep_Amputator] &&
-			weapon > MaxClients &&
-			weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Melee)
+			TF2_GetPlayerClass(client) == TFClass_Medic &&
+			IsValidEntity(weapon) &&
+			TF2Attrib_HookValueFloat(0.0, "add_health_regen", weapon) != 0.0
 		) {
 			full_regen = true;
 		}
 
 		if (
 			ItemIsEnabled(Set_Medieval) &&
-			player_weapons[client][Set_Medieval]
+			TF2Attrib_GetByDefIndex(client, 490) != Address_Null // health regen set bonus
 		) {
 			full_regen = true;
 		}
 
-		if (full_regen) {
-			regen_amount = TF2Attrib_HookValueFloat(0.0, "add_health_regen", client);
-			time_since_damage = GetGameTime() - TF2Util_GetPlayerLastDamageReceivedTime(client);
-			regen_scale = 1.0;
-
-			if (time_since_damage < 5.0) {
-				regen_scale = 4.0; // 1 / 0.25
-			} else {
-				// inverse of flScale = RemapValClamped( flTimeSinceDamage, 5.0f, 10.0f, 0.5f, 1.0f );
-				// third parameter is 9.0 to minimize chance of regen overshooting
-				regen_scale = ValveRemapVal(time_since_damage, 5.0, 9.0, 2.0, 1.0);
-			}
-
-			// apply regen
-			regen_amount *= regen_scale - 1.0; // compensate for original regen source
-			if (regen_amount != 0.0) {
-				TF2Attrib_AddCustomPlayerAttribute(client, "health drain medic", regen_amount, 0.001);
-			}
+		if (!playing_mvm && full_regen) {
+			GameRules_SetProp("m_bPlayingMannVsMachine", true, 1);
 		}
 	}
 	
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFPlayer_RegenThink_Post(int client) {
+	if (!playing_mvm) {
+		GameRules_SetProp("m_bPlayingMannVsMachine", false, 1);
+	}
 	return MRES_Ignored;
 }
 
@@ -7097,7 +7084,7 @@ MRESReturn DHookCallback_CTFPlayerShared_StunPlayer_Pre(Address pThis, DHookPara
 
 			// MvM bosses
 			if (
-				GameRules_GetProp("m_bPlayingMannVsMachine") &&
+				GameRules_GetProp("m_bPlayingMannVsMachine", 1) &&
 				(
 					GetEntProp(victim, Prop_Send, "m_bIsMiniBoss") ||
 					GetEntPropFloat(victim, Prop_Send, "m_flModelScale") > 1.0
