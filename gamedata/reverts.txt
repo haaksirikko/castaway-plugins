@@ -370,6 +370,11 @@
 				"windows"	"428"
 				"linux"		"435"
 			}
+			"CBaseCombatWeapon::CanHolster"
+			{
+				"windows"	"259"
+				"linux"		"265"
+			}
 
 			// ╔══════════════════════════════════════════════╗
 			// ║       Private/Protected Member Offsets       ║
@@ -825,6 +830,13 @@
 						"type"	"int"
 					}
 				}
+			}
+			"CBaseCombatWeapon::CanHolster"
+			{
+				"offset"	"CBaseCombatWeapon::CanHolster"
+				"hooktype"	"entity"
+				"this"		"entity"
+				"return"	"bool"
 			}
 
 			// Signature

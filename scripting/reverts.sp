@@ -361,6 +361,7 @@ DynamicHook dhook_CBaseCombatWeapon_Holster;
 DynamicHook dhook_CTFWeaponBase_GetSpeedMod;
 DynamicHook dhook_CTFGameRules_PlayerMayCapturePoint;
 DynamicHook dhook_CTFWeaponBaseGrenadeProj_InitGrenade;
+DynamicHook dhook_CBaseCombatWeapon_CanHolster;
 
 DynamicDetour dhook_CTFPlayer_CanDisguise;
 DynamicDetour dhook_CTFPlayer_CalculateMaxSpeed;
@@ -428,6 +429,7 @@ int CTFPlayerShared_m_fEnergyDrinkConsumeRate;
 int CTFStunBall_m_flCreationTime;
 int CTFPlayer_m_bIsTeleportingUsingEurekaEffect;
 int CTFPlayer_m_eEurekaTeleportTarget;
+int CTFKnife_m_bAllowHolsterBecauseForced;
 
 // Offsets loaded from gamedata
 int CTFPlayer_m_flTauntNextStartTime;
@@ -1015,6 +1017,7 @@ public void OnPluginStart() {
 		dhook_CTFGameRules_PlayerMayCapturePoint = DynamicHook.FromConf(conf, "CTFGameRules::PlayerMayCapturePoint");
 		dhook_CTFWeaponBaseGrenadeProj_InitGrenade = DynamicHook.FromConf(conf, "CTFWeaponBaseGrenadeProj::InitGrenade");
 		dhook_CTFWeaponBase_CanAttack = DynamicHook.FromConf(conf, "CTFWeaponBase::CanAttack");
+		dhook_CBaseCombatWeapon_CanHolster = DynamicHook.FromConf(conf, "CBaseCombatWeapon::CanHolster");
 
 		dhook_CTFPlayer_CanDisguise = DynamicDetour.FromConf(conf, "CTFPlayer::CanDisguise");
 		dhook_CTFPlayer_CalculateMaxSpeed = DynamicDetour.FromConf(conf, "CTFPlayer::TeamFortress_CalculateMaxSpeed");
@@ -1119,6 +1122,7 @@ public void OnPluginStart() {
 		CTFStunBall_m_flCreationTime = FindSendPropInfo("CTFStunBall", "m_iType") + 4;
 		CTFPlayer_m_bIsTeleportingUsingEurekaEffect = FindSendPropInfo("CTFPlayer", "m_flKartNextAvailableBoost") + 8;
 		CTFPlayer_m_eEurekaTeleportTarget = FindSendPropInfo("CTFPlayer", "m_flHandScale") + 16;
+		CTFKnife_m_bAllowHolsterBecauseForced = FindSendPropInfo("CTFKnife", "m_bReadyToBackstab") - 8;
 	}
 
 	// this is done this way so all failures are logged simultaneously rather than one by one
@@ -1163,6 +1167,7 @@ public void OnPluginStart() {
 	VALIDATE_HANDLE(dhook_CTFGameRules_PlayerMayCapturePoint);
 	VALIDATE_HANDLE(dhook_CTFWeaponBaseGrenadeProj_InitGrenade);
 	VALIDATE_HANDLE(dhook_CTFWeaponBase_CanAttack);
+	VALIDATE_HANDLE(dhook_CBaseCombatWeapon_CanHolster);
 
 	VALIDATE_HANDLE(dhook_CTFPlayer_CanDisguise);
 	VALIDATE_HANDLE(dhook_CTFPlayer_CalculateMaxSpeed);
@@ -2016,24 +2021,6 @@ public void OnGameFrame() {
 							}
 						}
 					}
-
-					{
-						// release spycicle prevent melting when hit by fire while taunting
-						if (GetItemVariant(Wep_Spycicle) == 1) {
-							weapon = GetEntPropEnt(idx, Prop_Send, "m_hActiveWeapon");
-
-							if (weapon > 0) {
-								if (
-									GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 649 &&
-									TF2_IsPlayerInCondition(idx, TFCond_Taunting) &&
-									(TF2_IsPlayerInCondition(idx, TFCond_FireImmune) || TF2_IsPlayerInCondition(idx, TFCond_OnFire))
-								) {
-									SetEntPropFloat(weapon, Prop_Send, "m_flKnifeRegenerateDuration", 0.0);
-									// PrintToChatAll("Hit by fire, regenerated Spycicle while taunting");
-								}
-							}
-						}
-					}
 				}
 
 				if (
@@ -2246,6 +2233,9 @@ public void OnEntityCreated(int entity, const char[] class) {
 	}
 	else if (StrEqual(class, "tf_weapon_revolver")) {
 		dhook_CTFRevolver_CanFireCriticalShot.HookEntity(Hook_Pre, entity, DHookCallback_CTFRevolver_CanFireCriticalShot_Pre);
+	}
+	else if (StrEqual(class, "tf_weapon_knife")) {
+		dhook_CBaseCombatWeapon_CanHolster.HookEntity(Hook_Pre, entity, DHookCallback_CTFKnife_CanHolster_Pre);
 	}
 	else if (StrStartsWith(class, "item_ammopack")) {
 		dhook_CAmmoPack_MyTouch.HookEntity(Hook_Pre, entity, DHookCallback_CAmmoPack_MyTouch_Pre);
@@ -7549,6 +7539,13 @@ MRESReturn DHookCallback_CTFPipebombLauncher_CanAttack_Pre(int entity, DHookRetu
 	if (forcing_sticky_detonate) {
 		returnValue.Value = true;
 		return MRES_Supercede;
+	}
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFKnife_CanHolster_Pre(int entity, DHookReturn returnValue) {
+	if (ItemIsEnabled(Wep_Spycicle)) {
+		SetEntData(entity, CTFKnife_m_bAllowHolsterBecauseForced, false, 1, true);
 	}
 	return MRES_Ignored;
 }
