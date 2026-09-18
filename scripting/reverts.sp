@@ -308,6 +308,7 @@ ConVar cvar_ref_sv_proj_stunball_damage;
 ConVar cvar_ref_tf_airblast_cray;
 ConVar cvar_ref_tf_damage_range;
 ConVar cvar_ref_tf_damageforcescale_other;
+ConVar cvar_ref_tf_double_donk_window;
 ConVar cvar_ref_tf_dropped_weapon_lifetime;
 ConVar cvar_ref_tf_feign_death_activate_damage_scale;
 ConVar cvar_ref_tf_feign_death_damage_scale;
@@ -769,6 +770,7 @@ public void OnPluginStart() {
 	ItemDefine("lochload", "LochLoad_PreGM", CLASSFLAG_DEMOMAN, Wep_LochLoad);
 	ItemVariant(Wep_LochLoad, "LochLoad_2013");
 	ItemDefine("cannon", "Cannon_PreTB", CLASSFLAG_DEMOMAN, Wep_LooseCannon);
+	ItemVariant(Wep_LooseCannon, "Cannon_Pre2013");
 #if defined MEMORY_PATCHES
 	ItemDefine("madmilk", "MadMilk_Release", CLASSFLAG_SCOUT, Wep_MadMilk, true);
 #endif
@@ -869,6 +871,7 @@ public void OnPluginStart() {
 	cvar_ref_tf_airblast_cray = FindConVar("tf_airblast_cray");
 	cvar_ref_tf_damage_range = FindConVar("tf_damage_range");
 	cvar_ref_tf_damageforcescale_other = FindConVar("tf_damageforcescale_other");
+	cvar_ref_tf_double_donk_window = FindConVar("tf_double_donk_window");
 	cvar_ref_tf_dropped_weapon_lifetime = FindConVar("tf_dropped_weapon_lifetime");
 	cvar_ref_tf_feign_death_activate_damage_scale = FindConVar("tf_feign_death_activate_damage_scale");
 	cvar_ref_tf_feign_death_damage_scale = FindConVar("tf_feign_death_damage_scale");
@@ -2063,6 +2066,7 @@ public void OnGameFrame() {
 		cvar_ref_weapon_medigun_charge_rate.RestoreDefault();
 
 		// these cvars are global, set them to the desired value
+		SetConVarMaybe(cvar_ref_tf_double_donk_window, "0.0", GetItemVariant(Wep_LooseCannon) == 1);
 		SetConVarMaybe(cvar_ref_tf_fireball_radius, "30.0", ItemIsEnabled(Wep_DragonFury));
 		SetConVarMaybe(cvar_ref_tf_parachute_maxspeed_xy, "400.0", ItemIsEnabled(Wep_BaseJumper));
 		SetConVarMaybe(cvar_ref_tf_parachute_maxspeed_onfire_z, "10.0", ItemIsEnabled(Wep_BaseJumper));
@@ -2125,6 +2129,7 @@ public void OnEntityCreated(int entity, const char[] class) {
 		dhook_CTFBaseRocket_GetRadius.HookEntity(Hook_Post, entity, DHookCallback_CTFBaseRocket_GetRadius_Post);
 	}
 	else if (StrEqual(class, "tf_projectile_pipe")) {
+		SDKHook(entity, SDKHook_Spawn, SDKHookCB_Spawn);
 		dhook_CTFWeaponBaseGrenadeProj_GetEnemy.HookEntity(Hook_Pre, entity, DHookCallback_CTFWeaponBaseGrenadeProj_GetEnemy_Pre);
 	}
 	else if (StrEqual(class, "tf_projectile_healing_bolt")) {
@@ -2594,9 +2599,18 @@ public void ApplyRevertsToItem(int entity) {
 			TF2Attrib_SetByDefIndex(entity, 773, 1.00); // single wep deploy time increased
 			TF2Attrib_SetByDefIndex(entity, 476, 100.0 / 75.0); // +33% damage bonus (for explosion, is canceled out for melee)
 		}}
-		case 996: { if (ItemIsEnabled(Wep_LooseCannon)) {
-			TF2Attrib_SetByDefIndex(entity, 103, 1.50); // projectile speed increased
-		}}
+		case 996: {
+			// common
+			if (ItemIsEnabled(Wep_LooseCannon)) {
+				TF2Attrib_SetByDefIndex(entity, 103, 1.50); // +50% projectile speed
+			}
+			// specific
+			if (GetItemVariant(Wep_LooseCannon) == 1) {
+				TF2Attrib_SetByDefIndex(entity, 466, 2.0); // Cannonballs have a fuse time of 2 seconds
+				TF2Attrib_SetByDefIndex(entity, 470, 0.50); // -50% damage on contact with surfaces
+				TF2Attrib_SetByDefIndex(entity, 476, 1.50); // +50% damage bonus (hidden)
+			}
+		}
 		case 751: {
 			// common
 			if (ItemIsEnabled(Wep_CleanerCarbine)) {
@@ -3117,7 +3131,14 @@ public void ApplyRevertsToItem(int entity) {
 		)
 	) {
 		TF2Attrib_SetByDefIndex(entity, 99, 159.0 / 146.0); // +8.9% explosion radius
-		TF2Attrib_SetByDefIndex(entity, 476, 1.12); // +12% damage bonus
+
+		Address attrib = TF2Attrib_GetByDefIndex(entity, 476);
+		if (attrib != Address_Null) {
+			TF2Attrib_SetByDefIndex(entity, 476, 1.12 * TF2Attrib_GetValue(attrib)); // +12% damage bonus
+		}
+		else {
+			TF2Attrib_SetByDefIndex(entity, 476, 1.12); // +12% damage bonus
+		}
 	}
 	else if (
 		ItemIsEnabled(Feat_Stickybomb) &&
@@ -4167,7 +4188,7 @@ Action SDKHookCB_OnTakeDamage(
 						cvar_ref_tf_damage_range.FloatValue *= 5.0;
 					}
 
-					// self-damage (counter 25% reduction to self in radiusdamage)
+					// undo self-damage reduction
 					if (
 						victim == attacker &&
 						damage_custom == TF_CUSTOM_STICKBOMB_EXPLOSION
@@ -4196,7 +4217,7 @@ Action SDKHookCB_OnTakeDamage(
 			}
 
 			{
-				// cannon impact damage
+				// cannon damage
 
 				if (
 					ItemIsEnabled(Wep_LooseCannon) &&
@@ -4209,8 +4230,22 @@ Action SDKHookCB_OnTakeDamage(
 
 					if (inflictor > MaxClients) {
 						damage = SDKCall(sdkcall_CBaseGrenade_GetDamage, inflictor);
+
+						if (GetItemVariant(Wep_LooseCannon) == 1) {
+							damage1 = (GetGameTime() - entities[inflictor].spawn_time - 0.1) / 0.7;
+							damage *= ValveRemapVal(damage1, 0.0, 1.0, 0.5, 1.0);
+						}
 						return Plugin_Changed;
 					}
+				}
+				else if (
+					GetItemVariant(Wep_LooseCannon) == 1 &&
+					victim == attacker &&
+					StrEqual(class, "tf_weapon_cannon")
+				) {
+					// undo self-damage reduction
+					damage /= 0.75;
+					return Plugin_Changed;
 				}
 			}
 
@@ -4531,6 +4566,7 @@ Action SDKHookCB_OnTakeDamage_Building(
 	int& weapon, float damage_force[3], float damage_position[3], int damage_custom
 ) {
 	//char class[64];
+	float damage1;
 
 	if (
 		victim > MaxClients &&
@@ -4548,6 +4584,11 @@ Action SDKHookCB_OnTakeDamage_Building(
 				damage_custom == TF_CUSTOM_CANNONBALL_PUSH
 			) {
 				damage = SDKCall(sdkcall_CBaseGrenade_GetDamage, inflictor);
+
+				if (GetItemVariant(Wep_LooseCannon) == 1) {
+					damage1 = (GetGameTime() - entities[inflictor].spawn_time - 0.1) / 0.7;
+					damage *= ValveRemapVal(damage1, 0.0, 1.0, 0.5, 1.0);
+				}
 				return Plugin_Changed;
 			}
 		}
