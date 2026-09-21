@@ -2058,6 +2058,7 @@ public void OnGameFrame() {
 		cvar_ref_tf_airblast_cray.RestoreDefault();
 		cvar_ref_tf_damage_range.RestoreDefault();
 		cvar_ref_tf_damageforcescale_other.RestoreDefault();
+		cvar_ref_tf_double_donk_window.RestoreDefault();
 		cvar_ref_tf_feign_death_duration.RestoreDefault();
 		cvar_ref_tf_feign_death_speed_duration.RestoreDefault();
 		cvar_ref_tf_feign_death_activate_damage_scale.RestoreDefault();
@@ -2066,7 +2067,6 @@ public void OnGameFrame() {
 		cvar_ref_weapon_medigun_charge_rate.RestoreDefault();
 
 		// these cvars are global, set them to the desired value
-		SetConVarMaybe(cvar_ref_tf_double_donk_window, "0.0", GetItemVariant(Wep_LooseCannon) == 1);
 		SetConVarMaybe(cvar_ref_tf_fireball_radius, "30.0", ItemIsEnabled(Wep_DragonFury));
 		SetConVarMaybe(cvar_ref_tf_parachute_maxspeed_xy, "400.0", ItemIsEnabled(Wep_BaseJumper));
 		SetConVarMaybe(cvar_ref_tf_parachute_maxspeed_onfire_z, "10.0", ItemIsEnabled(Wep_BaseJumper));
@@ -4166,6 +4166,7 @@ Action SDKHookCB_OnTakeDamage(
 
 		// tf_damage_range handles both distance ramp-up/fall-off and random spread
 		cvar_ref_tf_damage_range.RestoreDefault();
+		cvar_ref_tf_double_donk_window.RestoreDefault();
 
 		{
 			// save attacker's rage meter for modifications
@@ -4232,6 +4233,8 @@ Action SDKHookCB_OnTakeDamage(
 						damage = SDKCall(sdkcall_CBaseGrenade_GetDamage, inflictor);
 
 						if (GetItemVariant(Wep_LooseCannon) == 1) {
+							cvar_ref_tf_double_donk_window.FloatValue = 0.0;
+
 							damage1 = (GetGameTime() - entities[inflictor].spawn_time - 0.1) / 0.7;
 							damage *= ValveRemapVal(damage1, 0.0, 1.0, 0.5, 1.0);
 						}
