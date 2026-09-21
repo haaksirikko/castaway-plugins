@@ -910,7 +910,7 @@
 	}
 	"Cannon_Pre2013"
 	{
-		"en"	"Reverted to pre-Summer 2013, +50%% projectile speed, 2s fuse time, damage scales proportionally to time traveled, no double-donk, increased knockback, no stun"
+		"en"	"Reverted to pre-Summer 2013, +50%% projectile speed, 2s fuse time, damage increases at range, no double-donk, increased knockback, no stun, -50%% damage on world contact"
 	}
 	"MadMilk_Release"
 	{
