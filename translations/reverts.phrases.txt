@@ -968,6 +968,10 @@
 	{
 		"en"	"Increased hitbox size, penetrates targets, no charge drain fall-off, pierces bullet resists, ignites friendly Huntsman arrows, drains cloak per-tick if target is disguised or cloaked"
 	}
+	"Pomson_PreMYM"
+	{
+		"en"	"Increased hitbox size, passes through team, pierces bullet resists, ignites friendly Huntsman arrows"
+	}
 	"Powerjack_PreGM"
 	{
 		"en"	"Reverted to pre-gunmettle, +75 health restored on kill (can overheal)"

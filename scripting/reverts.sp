@@ -789,6 +789,7 @@ public void OnPluginStart() {
 	ItemVariant(Wep_Phlogistinator, "Phlog_Pre2016");
 	ItemDefine("pomson", "Pomson_PreGM", CLASSFLAG_ENGINEER, Wep_Pomson);
 	ItemVariant(Wep_Pomson, "Pomson_Release");
+	ItemVariant(Wep_Pomson, "Pomson_PreMYM");
 	ItemDefine("powerjack", "Powerjack_PreGM", CLASSFLAG_PYRO, Wep_Powerjack);
 	ItemVariant(Wep_Powerjack, "Powerjack_Release");
 	ItemVariant(Wep_Powerjack, "Powerjack_Pre2013");	
@@ -5017,6 +5018,7 @@ void SDKHookCB_OnTakeDamagePost(
 
 				if (
 					ItemIsEnabled(Wep_Pomson) &&
+					GetItemVariant(Wep_Pomson) != 2 &&
 					StrEqual(class, "tf_weapon_drg_pomson") &&
 					PlayerIsInvulnerable(victim) == false &&
 					players[victim].using_vaccinator_uber == false &&
