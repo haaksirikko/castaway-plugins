@@ -303,6 +303,7 @@ ConVar cvar_allow_detonate_stickies_while_taunting;
 ConVar cvar_pre_toughbreak_switch;
 ConVar cvar_enable_shortstop_shove;
 ConVar cvar_weapon_cache_delay;
+ConVar cvar_energy_ring_damage_formula;
 
 ConVar cvar_ref_sv_proj_stunball_damage;
 ConVar cvar_ref_tf_airblast_cray;
@@ -654,6 +655,7 @@ public void OnPluginStart() {
 	cvar_pre_toughbreak_switch = CreateConVar("sm_reverts__pre_toughbreak_switch", "0", (PLUGIN_NAME ... " - Use pre-toughbreak weapon switch time (0.67 sec instead of 0.5 sec)"), _, true, 0.0, true, 1.0);
 	cvar_enable_shortstop_shove = CreateConVar("sm_reverts__enable_shortstop_shove", "0", (PLUGIN_NAME ... " - Enable alt-fire shove for reverted Shortstop"), _, true, 0.0, true, 1.0);
 	cvar_weapon_cache_delay = CreateConVar("sm_reverts__weapon_cache_delay", "0.15", (PLUGIN_NAME ... " - Time delay for weapon caching on inventory application"), _, true, 0.0);
+	cvar_energy_ring_damage_formula = CreateConVar("sm_reverts__energy_ring_damage_formula", "0", (PLUGIN_NAME ... " - Damage formula for reverted Bison/Pomson\n 0: Vanilla (120% near, ~50% far, no crit falloff)\n 1: Pre-MYM (100% near, 70% far, crit falloff)\n 2: Pre-TB (100% near, 60% far, crit falloff)"), _, true, 0.0, true, 2.0);
 
 #if defined MEMORY_PATCHES
 	cvar_dropped_weapon_enable.AddChangeHook(OnDroppedWeaponCvarChange);
@@ -4485,16 +4487,12 @@ Action SDKHookCB_OnTakeDamage(
 						// charge drains in OnTakeDamagePost
 
 						// old damage formula
-						// {
-						// 	// Reduce base damage by 20% (Pomson 48, Bison 16)
-						// 	damage *= 0.8;
+						if (cvar_energy_ring_damage_formula.BoolValue) {
+							float falloff = cvar_energy_ring_damage_formula.IntValue == 1 ? 0.70 : 0.60;
 
-						// 	// Do not use internal rampup/falloff.
-						// 	damage_type &= ~DMG_USEDISTANCEMOD;
-
-						// 	// Deal damage with 125% rampup, 75% falloff.
-						// 	damage *= ValveRemapVal(floatMin(0.35, GetGameTime() - entities[players[victim].projectile_touch_entity].spawn_time), 0.35 / 2, 0.35, 1.25, 0.75);
-						// }
+							damage_type &= ~(DMG_NOCLOSEDISTANCEMOD | DMG_USEDISTANCEMOD);
+							damage *= ValveRemapVal(GetGameTime() - entities[players[victim].projectile_touch_entity].spawn_time, 0.35 / 2, 0.35, 1.0, falloff);
+						}
 
 						// Remove bullet damage type (untyped damage) and restore knockback
 						damage_type &= ~(DMG_BULLET | DMG_PREVENT_PHYSICS_FORCE);
