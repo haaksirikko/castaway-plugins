@@ -73,6 +73,7 @@ public Plugin myinfo = {
 #define BALANCE_CIRCUIT_RECOVERY 0.67
 #define PLAYER_CENTER_HEIGHT (82.0 / 2.0) // constant for tf2 players
 #define TF_COND_RESIST_OFFSET 58
+#define STUNFLAG_RESIST_DAMAGE (1 << 9) // No such flag exists in the game, used here for 2009 Sandman
 
 enum
 {
@@ -4597,27 +4598,22 @@ Action SDKHookCB_OnTakeDamageAlive(
 			// pre-WAR! sandman victims receive a portion of damage dealt
 
 			if (
+				resist_damage &&
 				GetItemVariant(Wep_Sandman) >= 2 &&
 				TF2_IsPlayerInCondition(victim, TFCond_Dazed) &&
-				resist_damage
+				GetEntProp(victim, Prop_Send, "m_iStunFlags") & STUNFLAG_RESIST_DAMAGE
 			) {
-				int stun_fls = GetEntProp(victim, Prop_Send, "m_iStunFlags");
-				if (
-					stun_fls & TF_STUNFLAG_BONKSTUCK != 0 &&
-					stun_fls & TF_STUNFLAG_NOSOUNDOREFFECT == 0
-				) {
-					damage *= GetItemVariant(Wep_Sandman) == 2 ? 0.75 : 0.50;
-					returnValue = Plugin_Changed;
-				}
+				damage *= GetItemVariant(Wep_Sandman) == 3 ? 0.50 : 0.75;
+				returnValue = Plugin_Changed;
 			}
 		}
 		{
 			// spunup resistance regardless of health
 
 			if (
+				resist_damage &&
 				TF2_GetPlayerClass(victim) == TFClass_Heavy &&
-				TF2_IsPlayerInCondition(victim, TFCond_Slowed) &&
-				resist_damage
+				TF2_IsPlayerInCondition(victim, TFCond_Slowed)
 			) {
 				weapon1 = GetPlayerWeaponSlot(victim, TFWeaponSlot_Primary);
 
@@ -4743,10 +4739,10 @@ Action SDKHookCB_OnTakeDamageAlive(
 		{
 			// 90% damage resistance for pre-Pyromania Phlog
 			if (
+				resist_damage &&
 				GetItemVariant(Wep_Phlogistinator) >= 1 &&
 				TF2_IsPlayerInCondition(victim, TFCond_DefenseBuffMmmph) &&
-				damage_custom != TF_CUSTOM_BACKSTAB &&
-				resist_damage
+				damage_custom != TF_CUSTOM_BACKSTAB
 			) {
 				// TFCond_DefenseBuffMmmph applies 75% resistance normally, buff it here by 60% for 90% resistance
 				damage *= 0.40;
@@ -7092,6 +7088,10 @@ MRESReturn DHookCallback_CTFPlayerShared_StunPlayer_Pre(Address pThis, DHookPara
 							}
 						}
 					}
+				}
+
+				if (GetItemVariant(Wep_Sandman) >= 2) {
+					stun_fls |= STUNFLAG_RESIST_DAMAGE;
 				}
 
 				// MvM bosses
