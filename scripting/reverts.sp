@@ -250,7 +250,6 @@ enum struct Player {
 	float sleeper_piss_duration;
 	bool sleeper_piss_explode;
 	float medic_amputator_current_uber;
-	bool medic_crossbow_heal;
 	float cleaver_regen_time;
 	int scout_airdash_value;
 	int scout_airdash_count;
@@ -905,7 +904,6 @@ public void OnPluginStart() {
 	HookEvent("player_death", Event_OnPlayerDeath, EventHookMode_Pre);
 	HookEvent("post_inventory_application", Event_OnPostInventoryApplication, EventHookMode_Post);
 	HookEvent("object_destroyed", Event_OnObjectDestroyed, EventHookMode_Post);
-	HookEvent("crossbow_heal", Event_OnCrossbowHeal, EventHookMode_Pre);
 
 	AddCommandListener(CommandListener_EurekaTeleport, "eureka_teleport");
 
@@ -1815,13 +1813,7 @@ public void OnGameFrame() {
 									player_weapons[idx][Wep_Amputator] &&
 									TF2_IsPlayerInCondition(idx, TFCond_Taunting)
 								) {
-									if (!players[idx].medic_crossbow_heal) {
-										SetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel", players[idx].medic_amputator_current_uber);
-										// Note: Uber tracking upon taunting via medic_amputator_current_uber is done in SDKHookCB_SpawnPost
-									} else {
-										players[idx].medic_amputator_current_uber = GetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel");
-										players[idx].medic_crossbow_heal = false;
-									}
+									SetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel", players[idx].medic_amputator_current_uber);
 								}
 
 								// pre-GM vaccinator stuff
@@ -2078,6 +2070,7 @@ public void OnClientConnected(int client) {
 	players[client].vaccinator_charge = 0.0;
 	players[client].vaccinator_charge_end = 0.0;
 	players[client].received_help_notice = false;
+	players[client].medic_amputator_current_uber = 0.0;
 
 	for (int i = 0; i < NUM_ITEMS; i++) {
 		prev_player_weapons[client][i] = false;
@@ -3757,19 +3750,6 @@ public Action Event_OnObjectDestroyed(Event event, const char[] name, bool dontB
 	return Plugin_Continue;
 }
 
-Action Event_OnCrossbowHeal(Event event, const char[] name, bool dontbroadcast) {
-	int client = GetClientOfUserId(GetEventInt(event, "healer"));
-
-	if (
-		GetItemVariant(Wep_Amputator) == 1 &&
-		player_weapons[client][Wep_Amputator] &&
-		TF2_IsPlayerInCondition(client, TFCond_Taunting)
-	) {
-		players[client].medic_crossbow_heal = true;
-	}
-	return Plugin_Continue;
-}
-
 Action CommandListener_EurekaTeleport(int client, const char[] command, int argc) {
 	if (TF2_GetPlayerClass(client) != TFClass_Engineer)
 		return Plugin_Continue;
@@ -3928,7 +3908,7 @@ void SDKHookCB_SpawnPost(int entity) {
 				players[owner].is_eureka_teleporting = true;
 			}
 			else if (
-				ItemIsEnabled(Wep_Amputator) &&
+				GetItemVariant(Wep_Amputator) == 1 &&
 				player_weapons[owner][Wep_Amputator] &&
 				StrEqual(scene, "scenes/player/medic/low/taunt03.vcd")
 			) {
@@ -3939,7 +3919,6 @@ void SDKHookCB_SpawnPost(int entity) {
 
 					if (StrEqual(class, "tf_weapon_medigun")) {
 						players[owner].medic_amputator_current_uber = GetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel");
-						// PrintToChat(owner, "GetEntPropFloat for m_flChargeLevel = %f", players[owner].medic_amputator_current_uber);
 					}
 				}
 			}
@@ -6313,21 +6292,18 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Post(int entit
 MRESReturn DHookCallback_CTFProjectile_HealingBolt_ImpactTeamPlayer_Pre(int entity, DHookParam parameters) {
 	// Reset in case we return early.
 	crossbow_medigun = -1;
+	old_charge_level = 0.0;
 
-	int medic = GetEntityOwner(entity);
-	int medigun;
-	if (
-		ItemIsEnabled(Wep_Crossbow) &&
-		medic >= 1 &&
-		medic <= MaxClients
-	) {
-		medigun = GetPlayerWeaponSlot(medic, TFWeaponSlot_Secondary);
+	int owner = GetEntityOwner(entity);
+	int weapon;
+	if (owner >= 1 && owner <= MaxClients) {
+		weapon = GetPlayerWeaponSlot(owner, TFWeaponSlot_Secondary);
 		if (
-			medigun > 0 &&
-			HasEntProp(medigun, Prop_Send, "m_flChargeLevel")
+			weapon > 0 &&
+			HasEntProp(weapon, Prop_Send, "m_flChargeLevel")
 		) {
-			crossbow_medigun = medigun;
-			old_charge_level = GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel");
+			crossbow_medigun = weapon;
+			old_charge_level = GetEntPropFloat(weapon, Prop_Send, "m_flChargeLevel");
 		}
 	}
 	return MRES_Ignored;
@@ -6340,19 +6316,32 @@ MRESReturn DHookCallback_CTFProjectile_HealingBolt_ImpactTeamPlayer_Post(int ent
 		crossbow_medigun > 0 &&
 		patient >= 1 && patient <= MaxClients
 	) {
-		charge = GetEntPropFloat(crossbow_medigun, Prop_Send, "m_flChargeLevel");
-		added = charge - old_charge_level;
-		if (added > 0.0) {
-			// flScale = RemapValClamped( curtime - lastDamageReceivedTime, 10.f, 15.f, 3.f, 1.f )
-			// The game added (iActualHealed / (24 * flScale)) * frametime.
-			// Scale it back up to the pre-JI (iActualHealed / 24) * frametime.
+		if (ItemIsEnabled(Wep_Crossbow)) {
+			charge = GetEntPropFloat(crossbow_medigun, Prop_Send, "m_flChargeLevel");
+			added = charge - old_charge_level;
+			if (added > 0.0) {
+				// flScale = RemapValClamped( curtime - lastDamageReceivedTime, 10.f, 15.f, 3.f, 1.f )
+				// The game added (iActualHealed / (24 * flScale)) * frametime.
+				// Scale it back up to the pre-JI (iActualHealed / 24) * frametime.
 
-			time_since_damage = GetGameTime() - TF2Util_GetPlayerLastDamageReceivedTime(patient);
-			charge = old_charge_level + added * ValveRemapVal(time_since_damage, 10.0, 15.0, 3.0, 1.0);
-			SetEntPropFloat(crossbow_medigun, Prop_Send, "m_flChargeLevel", floatMin(charge, 1.0));
+				time_since_damage = GetGameTime() - TF2Util_GetPlayerLastDamageReceivedTime(patient);
+				charge = old_charge_level + added * ValveRemapVal(time_since_damage, 10.0, 15.0, 3.0, 1.0);
+				SetEntPropFloat(crossbow_medigun, Prop_Send, "m_flChargeLevel", floatMin(charge, 1.0));
+			}
 		}
-		crossbow_medigun = -1;
+		if (GetItemVariant(Wep_Amputator) == 1) {
+			int owner = GetEntityOwner(entity);
+			if (
+				owner >= 1 && owner <= MaxClients &&
+				player_weapons[owner][Wep_Amputator] &&
+				TF2_IsPlayerInCondition(owner, TFCond_Taunting)
+			) {
+				players[owner].medic_amputator_current_uber = GetEntPropFloat(crossbow_medigun, Prop_Send, "m_flChargeLevel");
+			}
+		}
 	}
+	crossbow_medigun = -1;
+	old_charge_level = 0.0;
 	return MRES_Ignored;
 }
 
