@@ -950,7 +950,7 @@
 	}
 	"Phlog_Release"
 	{
-		"en"	"Reverted to release, activating MMMPH refills health with 90%% damage resist while taunting, MMMPH requires 225 fire damage, crit buff lasts 13 seconds"
+		"en"	"Reverted to release, activating MMMPH refills health with 90%% damage resist while taunting, MMMPH requires 225 fire damage, crit buff lasts 12 seconds"
 	}
 	"Phlog_March2012"
 	{
