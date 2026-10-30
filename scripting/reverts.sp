@@ -1199,6 +1199,7 @@ public void OnPluginStart() {
 	dhook_CTFProjectile_Arrow_BuildingHealingArrow.Enable(Hook_Pre, DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Pre);
 	dhook_CTFProjectile_Arrow_BuildingHealingArrow.Enable(Hook_Post, DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Post);
 	dhook_CTFPlayer_RegenThink.Enable(Hook_Pre, DHookCallback_CTFPlayer_RegenThink_Pre);
+	dhook_CTFPlayer_RegenThink.Enable(Hook_Post, DHookCallback_CTFPlayer_RegenThink_Post);
 	dhook_CTFPlayer_GiveAmmo.Enable(Hook_Pre, DHookCallback_CTFPlayer_GiveAmmo_Pre);
 	dhook_CTFLunchBox_DrainAmmo.Enable(Hook_Pre, DHookCallback_CTFLunchBox_DrainAmmo_Pre);
 	dhook_CTFPlayer_OnTauntSucceeded.Enable(Hook_Post, DHookCallback_CTFPlayer_OnTauntSucceeded_Post);
@@ -1615,8 +1616,8 @@ public void OnGameFrame() {
 									timer = GetEntPropFloat(weapon, Prop_Send, "m_flEffectBarRegenTime");
 
 									if (
-										timer > 0.1 &&
-										players[idx].cleaver_regen_time > 0.1 &&
+										timer > 0.0 &&
+										players[idx].cleaver_regen_time > 0.0 &&
 										(players[idx].cleaver_regen_time - timer) > 1.49 &&
 										(players[idx].cleaver_regen_time - timer) < 1.51
 									) {
@@ -1642,7 +1643,7 @@ public void OnGameFrame() {
 								if (StrEqual(class, "tf_weapon_bat_wood")) {
 									timer = GetEntPropFloat(weapon, Prop_Send, "m_flEffectBarRegenTime");
 
-									if (timer > 0.1) {
+									if (timer > 0.0) {
 										// m_flEffectBarRegenTime is the timestamp whenever the recharge is complete
 										// nudge the timestamp to get our desired recharge time using the following formula:
 										// new time = old time / ( 1 - nudge constant )
@@ -6372,64 +6373,32 @@ MRESReturn DHookCallback_CTFPlayer_AddToSpyKnife_Pre(int entity, DHookReturn ret
 }
 
 MRESReturn DHookCallback_CTFPlayer_RegenThink_Pre(int client) {
-	int weapon;
-	bool full_regen = false;
-	float regen_amount;
-	float time_since_damage;
-	float regen_scale;
-
-	// Don't proceed if in MvM
-	if (playing_mvm) return MRES_Ignored;
-
 	if (
-		client > 0 &&
-		client <= MaxClients
+		!playing_mvm && // Don't proceed if in MvM
+		client >= 1 && client <= MaxClients
 	) {
 		if (
-			ItemIsEnabled(Wep_Concheror) &&
-			player_weapons[client][Wep_Concheror]
+			(
+				ItemIsEnabled(Wep_Concheror) &&
+				player_weapons[client][Wep_Concheror] ||
+				ItemIsEnabled(Wep_Amputator) &&
+				player_weapons[client][Wep_Amputator] ||
+				ItemIsEnabled(Set_Medieval) &&
+				player_weapons[client][Set_Medieval]
+			) && TF2Attrib_HookValueFloat(0.0, "add_health_regen", client) > 0.0
 		) {
-			full_regen = true;
-		}
-
-		weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		if (
-			ItemIsEnabled(Wep_Amputator) &&
-			player_weapons[client][Wep_Amputator] &&
-			weapon > MaxClients &&
-			weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Melee)
-		) {
-			full_regen = true;
-		}
-
-		if (
-			ItemIsEnabled(Set_Medieval) &&
-			player_weapons[client][Set_Medieval]
-		) {
-			full_regen = true;
-		}
-
-		if (full_regen) {
-			regen_amount = TF2Attrib_HookValueFloat(0.0, "add_health_regen", client);
-			time_since_damage = GetGameTime() - TF2Util_GetPlayerLastDamageReceivedTime(client);
-			regen_scale = 1.0;
-
-			if (time_since_damage < 5.0) {
-				regen_scale = 4.0; // 1 / 0.25
-			} else {
-				// inverse of flScale = RemapValClamped( flTimeSinceDamage, 5.0f, 10.0f, 0.5f, 1.0f );
-				// third parameter is 9.0 to minimize chance of regen overshooting
-				regen_scale = ValveRemapVal(time_since_damage, 5.0, 9.0, 2.0, 1.0);
-			}
-
-			// apply regen
-			regen_amount *= regen_scale - 1.0; // compensate for original regen source
-			if (regen_amount != 0.0) {
-				TF2Attrib_AddCustomPlayerAttribute(client, "health drain medic", regen_amount, 0.001);
-			}
+			// Fake MvM gamerule for full regen
+			GameRules_SetProp("m_bPlayingMannVsMachine", true, 1);
 		}
 	}
 
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFPlayer_RegenThink_Post(int client) {
+	if (!playing_mvm) {
+		GameRules_SetProp("m_bPlayingMannVsMachine", false, 1);
+	}
 	return MRES_Ignored;
 }
 
@@ -7116,7 +7085,7 @@ MRESReturn DHookCallback_CTFPlayerShared_StunPlayer_Pre(Address pThis, DHookPara
 
 				// MvM bosses
 				if (
-					GameRules_GetProp("m_bPlayingMannVsMachine") &&
+					GameRules_GetProp("m_bPlayingMannVsMachine", 1) &&
 					(
 						GetEntProp(victim, Prop_Send, "m_bIsMiniBoss") ||
 						GetEntPropFloat(victim, Prop_Send, "m_flModelScale") > 1.0
