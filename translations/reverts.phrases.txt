@@ -588,6 +588,14 @@
 	{
 		"en"	"Reverted to pre-love&war, +9%% base blast radius, air-detonated stickies have full blast radius, can detonate while taunting (requires bind mouse2 \"+attack2; sm_detonatestickies\")"
 	}
+	"Stickybomb_Pre2009"
+	{
+		"en"	"Reverted to pre-February 2009, 150%% close-range ramp-up (from 120%%), +9%% base blast radius, air-detonated stickies have full blast radius"
+	}
+	"Stickybomb_Pre2009_Taunt_Detonate"
+	{
+		"en"	"Reverted to pre-February 2009, 150%% close-range ramp-up (from 120%%), +9%% base blast radius, air-detonated stickies have full blast radius, can detonate while taunting (requires bind mouse2 \"+attack2; sm_detonatestickies\")"
+	}
 	"Swords_PreTB"
 	{
 		"en"	"Reverted to pre-toughbreak, no deploy or holster penalties"
