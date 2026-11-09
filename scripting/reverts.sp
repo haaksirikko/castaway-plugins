@@ -3131,6 +3131,9 @@ public void ApplyRevertsToItem(int entity) {
 			}
 			case 1: { // Pre-Gun Mettle
 				TF2Attrib_SetByDefIndex(entity, 10, 1.50); // +50% ÜberCharge rate
+				TF2Attrib_SetByDefIndex(entity, 509, 0.03); // medigun crit bullet percent bar deplete
+				TF2Attrib_SetByDefIndex(entity, 510, 0.75); // medigun crit blast percent bar deplete
+				TF2Attrib_SetByDefIndex(entity, 511, 0.01); // medigun crit fire percent bar deplete
 				TF2Attrib_SetByDefIndex(entity, 739, 1.00); // -0% ÜberCharge rate on Overhealed patients
 			}
 		}}
@@ -4560,7 +4563,6 @@ Action SDKHookCB_OnTakeDamageAlive(
 	int weapon1;
 	int health_cur;
 	int health_max;
-	int healer;
 	float rage;
 
 	bool resist_damage = false;
@@ -4644,82 +4646,38 @@ Action SDKHookCB_OnTakeDamageAlive(
 			}
 
 			if (ItemIsEnabled(Wep_Vaccinator)) {
-				for (int i = 0; i < GetEntProp(victim, Prop_Send, "m_nNumHealers"); i++) {
-					healer = TF2Util_GetPlayerHealer(victim, i);
-
-					if (
-						healer >= 1 &&
-						healer <= MaxClients
-					) {
-						weapon1 = GetPlayerWeaponSlot(healer, TFWeaponSlot_Secondary);
-						if (weapon1 > 0) {
-							GetEntityClassname(weapon1, class, sizeof(class));
-							if (
-								StrEqual(class, "tf_weapon_medigun") &&
-								GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 998
-							) {
-								// vaccinator heal medic when patient takes damage
-								if (
-									attacker != victim &&
-									damage_type & resistance_mapping[GetResistType(weapon1)]
-								) {
-									if (
-										damage_type != DMG_BURN &&
-										victim != healer
-									) {
-										float resist_heal = damage * (GetItemVariant(Wep_Vaccinator) == 0 ? 0.10 : 0.25); // 10% for pre-TB, 25% for pre-GM
-										int resist_heal_ceil = RoundToCeil(resist_heal);
-
-										// Fire heal event
-										Handle event = CreateEvent("player_healonhit", true);
-										SetEventInt(event, "amount", resist_heal_ceil);
-										SetEventInt(event, "entindex", healer);
-										FireEvent(event);
-
-										// Take health
-										TF2Util_TakeHealth(healer, float(resist_heal_ceil));
-									}
-								}
-								// pre-GM vaccinator drain uber on crits
-								if (
-									GetItemVariant(Wep_Vaccinator) == 1 &&
-									damage_type & DMG_CRIT &&
-									players[healer].using_vaccinator_uber
-								) {
-									if (damage_type & resistance_mapping[0]) // bullet
-										players[healer].vaccinator_charge -= 0.03;
-									else if (damage_type & resistance_mapping[1]) // explosive
-										players[healer].vaccinator_charge -= 0.75;
-									else if (damage_type & resistance_mapping[2]) // fire
-										players[healer].vaccinator_charge -= 0.01;
-									SetEntPropFloat(weapon1, Prop_Send, "m_flChargeLevel", floatMax(players[healer].vaccinator_charge, 0.0));
-								}
-							}
-						}
-					}
+				if (damage_type & resistance_mapping[0]) {
+					VaccinatorHealOnMatchedDamage(victim, TFCond_UberBulletResist, TFCond_SmallBulletResist, damage);
 				}
-			}
+				if (damage_type & resistance_mapping[1]) {
+					VaccinatorHealOnMatchedDamage(victim, TFCond_UberBlastResist, TFCond_SmallBlastResist, damage);
+				}
+				if (damage_type & resistance_mapping[2]) {
+					VaccinatorHealOnMatchedDamage(victim, TFCond_UberFireResist, TFCond_SmallFireResist, damage);
+				}
 
-			// pre-GM vaccinator full crit resist
-			if (
-				GetItemVariant(Wep_Vaccinator) == 1 &&
-				damage_type & DMG_CRIT
-			) {
 				if (
-					damage_type & resistance_mapping[0] &&
-					TF2_IsPlayerInCondition(victim, TFCond_SmallBulletResist) ||
-					damage_type & resistance_mapping[1] &&
-					TF2_IsPlayerInCondition(victim, TFCond_SmallBlastResist) ||
-					damage_type & resistance_mapping[2] &&
-					TF2_IsPlayerInCondition(victim, TFCond_SmallFireResist)
+					GetItemVariant(Wep_Vaccinator) == 1 &&
+					damage_type & DMG_CRIT
 				) {
-					// Resist critical damage for this frame
-					TF2Attrib_AddCustomPlayerAttribute(
-						victim,
-						"dmg taken from crit increased",
-						TF2_IsPlayerInCondition(victim, TFCond_HealingDebuff) ? 0.20 : 0.0,
-						0.001
-					);
+					if (damage_type & resistance_mapping[0]) {
+						VaccinatorHandleCrits(
+							victim, TFCond_UberBulletResist, TFCond_SmallBulletResist,
+							"medigun_crit_bullet_percent_bar_deplete"
+						);
+					}
+					if (damage_type & resistance_mapping[1]) {
+						VaccinatorHandleCrits(
+							victim, TFCond_UberBlastResist, TFCond_SmallBlastResist,
+							"medigun_crit_blast_percent_bar_deplete"
+						);
+					}
+					if (damage_type & resistance_mapping[2]) {
+						VaccinatorHandleCrits(
+							victim, TFCond_UberFireResist, TFCond_SmallFireResist,
+							"medigun_crit_fire_percent_bar_deplete"
+						);
+					}
 				}
 			}
 
@@ -5604,6 +5562,58 @@ bool CanDetonateStickiesNow(int client) {
 		return false;
 
 	return true;
+}
+
+void VaccinatorHealOnMatchedDamage(int victim, TFCond deployed, TFCond passive, float damage) {
+	int provider;
+	if (TF2_IsPlayerInCondition(victim, deployed)) {
+		provider = TF2Util_GetPlayerConditionProvider(victim, deployed);
+	} else if (TF2_IsPlayerInCondition(victim, passive)) {
+		provider = TF2Util_GetPlayerConditionProvider(victim, passive);
+	} else {
+		return;
+	}
+
+	if (
+		provider >= 1 && provider <= MaxClients &&
+		provider != victim
+	) {
+		float heal_fraction = GetItemVariant(Wep_Vaccinator) == 0 ? 0.10 : 0.25;
+		int heal = RoundToFloor(damage * heal_fraction);
+		TF2Util_TakeHealth(provider, float(heal));
+
+		Event event = CreateEvent("player_healonhit", true);
+		if (event != null) {
+			event.SetInt("amount", heal);
+			event.SetInt("entindex", provider);
+			event.Fire();
+		}
+	}
+}
+
+void VaccinatorHandleCrits(int victim, TFCond deployed, TFCond passive, const char[] drain_attrib) {
+	bool deployed_active = TF2_IsPlayerInCondition(victim, deployed);
+	if (deployed_active || TF2_IsPlayerInCondition(victim, passive)) {
+		TFCond resist = deployed_active ? deployed : passive;
+		int provider = TF2Util_GetPlayerConditionProvider(victim, resist);
+
+		if (provider >= 1 && provider <= MaxClients) {
+			int medigun = GetPlayerWeaponSlot(provider, TFWeaponSlot_Secondary);
+			if (
+				medigun > 0 &&
+				GetEntProp(medigun, Prop_Send, "m_iItemDefinitionIndex") == 998
+			) {
+				if (deployed_active) {
+					float drain = TF2Attrib_HookValueFloat(0.0, drain_attrib, provider);
+					players[provider].vaccinator_charge = floatMax(players[provider].vaccinator_charge - drain, 0.0);
+					SetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel", players[provider].vaccinator_charge);
+				}
+				else if (GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") > 0.0) {
+					TF2Attrib_AddCustomPlayerAttribute(victim, "dmg taken from crit increased", 0.0, 0.001);
+				}
+			}
+		}
+	}
 }
 
 void SetShovelDamageBoost(int entity) {
