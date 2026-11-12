@@ -111,6 +111,7 @@ int resistance_mapping[] =
 #define TF_CANNONBALL_FORCE_SCALE 80.0
 #define TF_CANNONBALL_FORCE_UPWARD 300.0
 #define GR_STATE_TEAM_WIN 5
+#define TAUNT_BASE_WEAPON 0
 
 enum
 {
@@ -254,14 +255,14 @@ enum struct Player {
 	float backstab_time;
 	int old_health;
 	bool is_under_hype;
-	int charge_tick;
+	int shield_charge_frame;
 	int fall_damage_frame;
 	bool holding_jump;
 	bool holding_attack2;
 	int drain_victim;
 	float drain_time;
 	float rage_meter;
-	int mmmph_use_tick;
+	int mmmph_use_frame;
 	float aiming_cond_time;
 	float weapon_switch_time;
 	bool deny_metal_collection;
@@ -2109,6 +2110,7 @@ public void OnClientConnected(int client) {
 	players[client].vaccinator_charge_end = 0.0;
 	players[client].received_help_notice = false;
 	players[client].medic_amputator_current_uber = -1.0;
+	players[client].old_health = -1;
 
 	for (int i = 0; i < NUM_ITEMS; i++) {
 		prev_player_weapons[client][i] = false;
@@ -2354,7 +2356,7 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 	}
 }
 
-public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &provider) {
+Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &provider) {
 	{
 		// Old Dead Ringer feign
 		if (
@@ -2384,7 +2386,7 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 	{
 		// save charge tick (for preventing debuff removal)
 		if (condition == TFCond_Charging) {
-			players[client].charge_tick = GetGameTickCount();
+			players[client].shield_charge_frame = GetGameTickCount();
 			return Plugin_Continue;
 		}
 	}
@@ -2399,7 +2401,7 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 				condition == TFCond_CritMmmph &&
 				GetEntPropFloat(client, Prop_Send, "m_flRageMeter") == 100.0
 			) {
-				players[client].mmmph_use_tick = GetGameTickCount();
+				players[client].mmmph_use_frame = GetGameTickCount();
 
 				// Refill health on mmmph activation
 				int health_max = SDKCall(sdkcall_GetMaxHealth, client);
@@ -2411,7 +2413,7 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 			if (
 				GetItemVariant(Wep_Phlogistinator) < 3 &&
 				TF2_IsPlayerInCondition(client, TFCond_CritMmmph) &&
-				players[client].mmmph_use_tick == GetGameTickCount() &&
+				players[client].mmmph_use_frame == GetGameTickCount() &&
 				FloatAbs(2.6 - time) < 0.01
 			) {
 				// increase condition time to 3s, TF2 normally applies 2.6s
@@ -2489,11 +2491,11 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 	return Plugin_Continue;
 }
 
-public Action TF2_OnRemoveCond(int client, TFCond &condition, float &timeleft, int &provider) {
+Action TF2_OnRemoveCond(int client, TFCond &condition, float &timeleft, int &provider) {
 	{
 		// prevent debuff removal for shields
 		if (
-			players[client].charge_tick == GetGameTickCount() &&
+			players[client].shield_charge_frame == GetGameTickCount() &&
 			(
 				ItemIsEnabled(Wep_CharginTarge) && player_weapons[client][Wep_CharginTarge] ||
 				ItemIsEnabled(Wep_SplendidScreen) && player_weapons[client][Wep_SplendidScreen] ||
@@ -4039,14 +4041,15 @@ Action SDKHookCB_TraceAttack(
 		victim >= 1 && victim <= MaxClients &&
 		attacker >= 1 && attacker <= MaxClients
 	) {
-		if (hitgroup == 1) {
-			if (
+		if (
+			hitgroup == 1 &&
+			(
 				damage_type & DMG_USE_HITLOCATIONS != 0 ||
 				TF2_GetPlayerClass(attacker) == TFClass_Sniper
-			) {
-				players[attacker].headshot_frame = GetGameTickCount();
-				players[victim].hit_by_headshot = true;
-			}
+			)
+		) {
+			players[attacker].headshot_frame = GetGameTickCount();
+			players[victim].hit_by_headshot = true;
 		} else {
 			players[victim].hit_by_headshot = false;
 		}
@@ -4066,20 +4069,9 @@ Action SDKHookCB_OnTakeDamage(
 	float damage1;
 	int weapon1;
 
-	// bool resist_damage = false;
-	// if (weapon > 0) {
-	// 	// Don't resist if weapon pierces resists (vanilla Enforcer)
-	// 	if (TF2Attrib_HookValueInt(0, "mod_pierce_resists_absorbs", weapon) == 0) {
-	// 		resist_damage = true;
-	// 	}
-	// } else {
-	// 	resist_damage = true;
-	// }
+	// bool resist_damage = weapon <= 0 || TF2Attrib_HookValueInt(0, "mod_pierce_resists_absorbs", weapon) == 0;
 
-	if (
-		victim >= 1 &&
-		victim <= MaxClients
-	) {
+	if (victim >= 1 && victim <= MaxClients) {
 		// damage from any source
 
 		{
@@ -4247,22 +4239,24 @@ Action SDKHookCB_OnTakeDamage(
 			}
 
 			{
-				// reserve airborne minicrits
+				// airborne minicrits
 
 				if (
-					ItemIsEnabled(Wep_ReserveShooter) &&
-					StrStartsWith(class, "tf_weapon_shotgun") &&
-					GetEntProp(weapon, Prop_Send, "m_iItemDefinitionIndex") == 415 &&
 					GetEntityFlags(victim) & FL_ONGROUND == 0 &&
-					GetEntProp(victim, Prop_Data, "m_nWaterLevel") == 0
+					GetEntProp(victim, Prop_Data, "m_nWaterLevel") == 0 &&
+					(
+						ItemIsEnabled(Wep_ReserveShooter) &&
+						StrStartsWith(class, "tf_weapon_shotgun") ||
+						ItemIsEnabled(Wep_DirectHit) &&
+						StrEqual(class, "tf_weapon_rocketlauncher_directhit")
+					)
 				) {
-					float time_to_minicrit = TF2Attrib_HookValueFloat(0.0, "mini_crit_airborne_deploy", weapon);
 					if (
-						(GetGameTime() - players[attacker].weapon_switch_time) < time_to_minicrit ||
-						(
-							TF2Attrib_HookValueInt(0, "mini_crit_airborne", weapon) == 1 &&
-							TF2_IsPlayerInCondition(victim, TFCond_KnockedIntoAir)
-						)
+						TF2Attrib_HookValueInt(0, "mini_crit_airborne", weapon) == 1 &&
+						TF2_IsPlayerInCondition(victim, TFCond_KnockedIntoAir)
+						||
+						TF2Attrib_HookValueFloat(0.0, "mini_crit_airborne_deploy", weapon)
+						> GetGameTime() - players[attacker].weapon_switch_time
 					) {
 						// seems to be the best way to force a minicrit
 						TF2_AddCondition(victim, TFCond_MarkedForDeathSilent, 0.001, 0);
@@ -4373,8 +4367,7 @@ Action SDKHookCB_OnTakeDamage(
 
 				if (
 					ItemIsEnabled(Wep_Cleaver) &&
-					damage > 20.0 && // don't count bleed damage
-					StrEqual(class, "tf_weapon_cleaver") &&
+					damage_custom == TF_CUSTOM_CLEAVER &&
 					players[victim].projectile_touch_frame == GetGameTickCount() &&
 					(GetGameTime() - entities[players[victim].projectile_touch_entity].spawn_time) >= 1.0
 				) {
@@ -4429,7 +4422,6 @@ Action SDKHookCB_OnTakeDamage(
 				// shield bash
 				if (
 					damage_custom == TF_CUSTOM_CHARGE_IMPACT &&
-					StrEqual(class, "tf_wearable_demoshield") &&
 					(
 						ItemIsEnabled(Wep_CharginTarge) && player_weapons[attacker][Wep_CharginTarge] ||
 						ItemIsEnabled(Wep_SplendidScreen) && player_weapons[attacker][Wep_SplendidScreen] ||
@@ -4442,8 +4434,8 @@ Action SDKHookCB_OnTakeDamage(
 					// if using splendid screen, bash damage at any range
 					// other shields can only bash at the end of a charge
 					if (
-						player_weapons[attacker][Wep_SplendidScreen] == false &&
-						GetEntPropFloat(attacker, Prop_Send, "m_flChargeMeter") > 40.0
+						GetEntPropFloat(attacker, Prop_Send, "m_flChargeMeter") > 40.0 &&
+						TF2Attrib_HookValueInt(0, "no_charge_impact_range", attacker) == 0
 					) {
 						return Plugin_Handled;
 					}
@@ -4483,19 +4475,6 @@ Action SDKHookCB_OnTakeDamage(
 			}
 
 			{
-				// direct hit minicrits
-				if (
-					ItemIsEnabled(Wep_DirectHit) &&
-					StrEqual(class, "tf_weapon_rocketlauncher_directhit") &&
-					GetEntityFlags(victim) & FL_ONGROUND == 0 &&
-					GetEntProp(victim, Prop_Data, "m_nWaterLevel") == 0 &&
-					TF2_IsPlayerInCondition(victim, TFCond_KnockedIntoAir) == true
-				) {
-					TF2_AddCondition(victim, TFCond_MarkedForDeathSilent, 0.001, 0);
-				}
-			}
-
-			{
 				// Bazaar bargain headshot: gain a head.
 				if (
 					ItemIsEnabled(Wep_BazaarBargain) &&
@@ -4515,20 +4494,23 @@ Action SDKHookCB_OnTakeDamage(
 					// bison/pomson damage
 					GetEntityClassname(weapon, class, sizeof(class));
 
+					bool is_bison = StrEqual(class, "tf_weapon_raygun");
+					bool is_pomson = StrEqual(class, "tf_weapon_drg_pomson");
+
 					if (
-						ItemIsEnabled(Wep_Bison) && StrEqual(class, "tf_weapon_raygun") ||
-						ItemIsEnabled(Wep_Pomson) && StrEqual(class, "tf_weapon_drg_pomson")
+						ItemIsEnabled(Wep_Bison) && is_bison ||
+						ItemIsEnabled(Wep_Pomson) && is_pomson
 					) {
 						// charge drains in OnTakeDamagePost
 
 						// old damage formula
 						if (
-							cvar_bison_damage_formula.BoolValue && StrEqual(class, "tf_weapon_raygun") ||
-							cvar_pomson_damage_formula.BoolValue && StrEqual(class, "tf_weapon_drg_pomson")
+							cvar_bison_damage_formula.BoolValue && is_bison ||
+							cvar_pomson_damage_formula.BoolValue && is_pomson
 						) {
 							float falloff = (
-								cvar_bison_damage_formula.IntValue == 2 && StrEqual(class, "tf_weapon_raygun") ||
-								cvar_pomson_damage_formula.IntValue == 2 && StrEqual(class, "tf_weapon_drg_pomson")
+								cvar_bison_damage_formula.IntValue == 2 && is_bison ||
+								cvar_pomson_damage_formula.IntValue == 2 && is_pomson
 							) ? 0.60 : 0.70;
 
 							damage_type &= ~(DMG_NOCLOSEDISTANCEMOD | DMG_USEDISTANCEMOD);
@@ -4597,25 +4579,14 @@ Action SDKHookCB_OnTakeDamageAlive(
 	Action returnValue = Plugin_Continue;
 	char class[64];
 	int weapon1;
-	int health_cur;
-	int health_max;
+	//int health_cur;
+	//int health_max;
 	int healer;
 	float rage;
 
-	bool resist_damage = false;
-	if (weapon > 0) {
-		// Don't resist if weapon pierces resists (vanilla Enforcer)
-		if (TF2Attrib_HookValueInt(0, "mod_pierce_resists_absorbs", weapon) == 0) {
-			resist_damage = true;
-		}
-	} else {
-		resist_damage = true;
-	}
+	bool resist_damage = weapon <= 0 || TF2Attrib_HookValueInt(0, "mod_pierce_resists_absorbs", weapon) == 0;
 
-	if (
-		victim >= 1 &&
-		victim <= MaxClients
-	) {
+	if (victim >= 1 && victim <= MaxClients) {
 		if (
 			GetItemVariant(Wep_DeadRinger) == 0 &&
 			TF2_IsPlayerInCondition(victim, TFCond_DeadRingered)
@@ -4630,53 +4601,44 @@ Action SDKHookCB_OnTakeDamageAlive(
 
 			if (
 				GetItemVariant(Wep_Sandman) >= 2 &&
-				TF2_IsPlayerInCondition(victim, TFCond_Dazed) &&
-				GetEntProp(victim, Prop_Send, "m_iStunFlags") & STUNFLAG_RESIST_DAMAGE
+				TF2_IsPlayerInCondition(victim, TFCond_Dazed)
 			) {
-				damage *= GetItemVariant(Wep_Sandman) == 3 ? 0.50 : 0.75;
-				returnValue = Plugin_Changed;
+				int stun_fls = GetEntProp(victim, Prop_Send, "m_iStunFlags");
+				if (
+					stun_fls & TF_STUNFLAG_BONKSTUCK != 0 &&
+					stun_fls & STUNFLAG_RESIST_DAMAGE != 0
+				) {
+					damage *= GetItemVariant(Wep_Sandman) == 3 ? 0.50 : 0.75;
+					returnValue = Plugin_Changed;
+				}
 			}
 
 			// spunup resistance regardless of health
 
 			if (
 				TF2_GetPlayerClass(victim) == TFClass_Heavy &&
-				TF2_IsPlayerInCondition(victim, TFCond_Slowed)
+				TF2_IsPlayerInCondition(victim, TFCond_Slowed) &&
+				(
+					ItemIsEnabled(Wep_BrassBeast) && ItemIsEnabled(Wep_Natascha) ||
+					ItemIsEnabled(Wep_BrassBeast) && player_weapons[victim][Wep_BrassBeast] ||
+					ItemIsEnabled(Wep_Natascha) && player_weapons[victim][Wep_Natascha]
+				)
 			) {
-				weapon1 = GetPlayerWeaponSlot(victim, TFWeaponSlot_Primary);
+				float spunup_resist = TF2Attrib_HookValueFloat(1.0, "spunup_damage_resistance", victim);
+				if (spunup_resist > 0.0 && spunup_resist != 1.0) {
 
-				if (weapon1 > 0) {
-					GetEntityClassname(weapon1, class, sizeof(class));
+					// apply resistance only when above 50% of max health
+					if ((float(GetClientHealth(victim)) - damage) / float(SDKCall(sdkcall_GetMaxHealth, victim)) > 0.5) {
 
-					if (
-						StrEqual(class, "tf_weapon_minigun") &&
-						(
-							ItemIsEnabled(Wep_BrassBeast) &&
-							GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 312 ||
-							ItemIsEnabled(Wep_Natascha) &&
-							GetEntProp(weapon1, Prop_Send, "m_iItemDefinitionIndex") == 41
-						)
-					) {
-						health_cur = GetClientHealth(victim);
-						health_max = SDKCall(sdkcall_GetMaxHealth, victim);
-						float spunup_resist = TF2Attrib_HookValueFloat(1.0, "spunup_damage_resistance", victim);
+						// play damage resist sound
+						EmitGameSoundToAll("Player.ResistanceLight", victim);
 
-						// apply resistance only when above 50% of max health
-						if (
-							(float(health_cur) - damage) / float(health_max) > 0.5 &&
-							spunup_resist > 0.0 &&
-							spunup_resist != 1.0
-						) {
-							// play damage resist sound
-							EmitGameSoundToAll("Player.ResistanceLight", victim);
-
-							// apply resistance
-							TF2Attrib_AddCustomPlayerAttribute(victim, "dmg taken increased", spunup_resist, 0.001);
-							if (damage_type & DMG_CRIT) {
-								// increase crit vuln here for proper resist on crits and minicrits
-								// (multiplicative inverse of spunup resist value)
-								TF2Attrib_AddCustomPlayerAttribute(victim, "dmg taken from crit increased", 1.0 / spunup_resist, 0.001);
-							}
+						// apply resistance
+						TF2Attrib_AddCustomPlayerAttribute(victim, "dmg taken increased", spunup_resist, 0.001);
+						if (damage_type & DMG_CRIT) {
+							// increase crit vuln here for proper resist on crits and minicrits
+							// (multiplicative inverse of spunup resist value)
+							TF2Attrib_AddCustomPlayerAttribute(victim, "dmg taken from crit increased", 1.0 / spunup_resist, 0.001);
 						}
 					}
 				}
@@ -4832,19 +4794,16 @@ Action SDKHookCB_OnTakeDamageAlive(
 		{
 			if (
 				victim == attacker &&
-				damage > 0 &&
+				damage > 0.0 &&
 				damage_type & DMG_BLAST != 0
 			) {
 				if (
 					// Kamikaze taunt tanking for all Rocket Jumper variants
-					(ItemIsEnabled(Wep_RocketJumper) &&
-					player_weapons[victim][Wep_RocketJumper] &&
-					damage_custom == TF_CUSTOM_TAUNT_GRENADE) ||
+					ItemIsEnabled(Wep_RocketJumper) && player_weapons[victim][Wep_RocketJumper] &&
+					damage_custom == TF_CUSTOM_TAUNT_GRENADE ||
 					// All self blast damage tanking for some Rocket Jumper and Sticky Jumper variants
-					(GetItemVariant(Wep_RocketJumper) >= 1 &&
-					player_weapons[victim][Wep_RocketJumper]) ||
-					(GetItemVariant(Wep_StickyJumper) >= 2 &&
-					player_weapons[victim][Wep_StickyJumper])
+					GetItemVariant(Wep_RocketJumper) >= 1 && player_weapons[victim][Wep_RocketJumper] ||
+					GetItemVariant(Wep_StickyJumper) >= 2 && player_weapons[victim][Wep_StickyJumper]
 				) {
 					players[victim].old_health = GetClientHealth(victim);
 					SetEntityHealth(victim, 500);
@@ -4867,7 +4826,7 @@ Action SDKHookCB_OnTakeDamageAlive(
 						ItemIsEnabled(Wep_Gunboats) &&
 						player_weapons[victim][Wep_Gunboats]
 					) {
-						damage *= TF2Attrib_HookValueFloat(1.0, "rocket_jump_dmg_reduction", victim);
+						damage = TF2Attrib_HookValueFloat(damage, "rocket_jump_dmg_reduction", victim);
 						returnValue = Plugin_Changed;
 					}
 				}
@@ -4891,10 +4850,7 @@ void SDKHookCB_OnTakeDamagePost(
 	float rage;
 	float delta;
 
-	if (
-		victim >= 1 &&
-		victim <= MaxClients
-	) {
+	if (victim >= 1 && victim <= MaxClients) {
 		// turner charge loss on damage taken
 		// i ought to rework this later by leaving the vanilla attribute alone and forcing melee crits ourselves
 		if (
@@ -4953,17 +4909,10 @@ void SDKHookCB_OnTakeDamagePost(
 			damage > 0.0 &&
 			damage_type & DMG_BLAST != 0
 		) {
-			if (
-				(ItemIsEnabled(Wep_RocketJumper) &&
-				player_weapons[victim][Wep_RocketJumper] &&
-				damage_custom == TF_CUSTOM_TAUNT_GRENADE) ||
-				(GetItemVariant(Wep_RocketJumper) >= 1 &&
-				player_weapons[victim][Wep_RocketJumper]) ||
-				(GetItemVariant(Wep_StickyJumper) >= 2 &&
-				player_weapons[victim][Wep_StickyJumper])
-			) {
+			if (players[victim].old_health > 0) {
 				// Restore health after tanking self blast damage
 				SetEntityHealth(victim, players[victim].old_health);
+				players[victim].old_health = -1;
 			}
 		}
 
@@ -5166,7 +5115,7 @@ public Action OnPlayerRunCmd(
 
 				if (
 					stun_fls & TF_STUNFLAG_BONKSTUCK != 0 &&
-					stun_fls & TF_STUNFLAG_NOSOUNDOREFFECT == 0
+					stun_fls & STUNFLAG_RESIST_DAMAGE != 0
 				) {
 					// Pre-Classless Sandman un-revs Heavies
 					buttons &= ~(IN_ATTACK | IN_ATTACK2);
@@ -5991,17 +5940,16 @@ MRESReturn DHookCallback_CTFLunchBox_DrainAmmo_Pre(int entity) {
 }
 
 MRESReturn DHookCallback_CTFPlayer_OnTauntSucceeded_Post(int entity, DHookParam parameters) {
-	char pszSceneName[PLATFORM_MAX_PATH];
-	parameters.GetString(1, pszSceneName, sizeof(pszSceneName));
-	int iTauntIndex = parameters.Get(2);
+	char scene[PLATFORM_MAX_PATH];
+	parameters.GetString(1, scene, sizeof(scene));
+	int index = parameters.Get(2);
 
 	if (
 		ItemIsEnabled(Wep_Huntsman) &&
 		TF2_GetPlayerClass(entity) == TFClass_Sniper &&
-		StrEqual(pszSceneName, "scenes/player/sniper/low/taunt04.vcd") &&
-		iTauntIndex == 0 // See tf_shareddefs.h for enum. 0 is TAUNT_BASE_WEAPON.
+		StrEqual(scene, "scenes/player/sniper/low/taunt04.vcd") &&
+		index == TAUNT_BASE_WEAPON
 	) {
-		// Set the players m_flTauntNextStartTime to CurrentTime.
 		SetEntDataFloat(entity, CTFPlayer_m_flTauntNextStartTime, GetGameTime(), true);
 	}
 	return MRES_Ignored;
@@ -6023,8 +5971,6 @@ MRESReturn DHookCallback_CTFBaseRocket_GetRadius_Post(int entity, DHookReturn re
 
 MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed_Post(int client, DHookReturn returnValue) {
 	if (
-		client >= 1 &&
-		client <= MaxClients &&
 		IsValidEntity(client) &&
 		IsClientInGame(client)
 	) {
@@ -6106,13 +6052,13 @@ MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed_Post(int client, DHookRetur
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int entity, DHookReturn returnValue) {
+MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int client, DHookReturn returnValue) {
 	if (
-		IsPlayerAlive(entity) &&
-		TF2_GetPlayerClass(entity) == TFClass_Spy &&
-		(GetGameTime() - players[entity].backstab_time) > 0.0 &&
-		(GetGameTime() - players[entity].backstab_time) < 0.5 &&
-		ItemIsEnabled(Wep_EternalReward)
+		ItemIsEnabled(Wep_EternalReward) &&
+		IsPlayerAlive(client) &&
+		TF2_GetPlayerClass(client) == TFClass_Spy &&
+		(GetGameTime() - players[client].backstab_time) > 0.0 &&
+		(GetGameTime() - players[client].backstab_time) < 0.5
 	) {
 		// CanDisguise() is being called from the eternal reward's DisguiseOnKill()
 		// so we have to overwrite the result, otherwise the "cannot disguise" attrib will block it
@@ -6121,8 +6067,7 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int entity, DHookReturn retu
 
 		char class[64];
 
-		int flag = GetEntPropEnt(entity, Prop_Send, "m_hItem");
-
+		int flag = GetEntPropEnt(client, Prop_Send, "m_hItem");
 		if (flag > 0) {
 			GetEntityClassname(flag, class, sizeof(class));
 
@@ -6134,12 +6079,11 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int entity, DHookReturn retu
 			}
 		}
 
-		if (GetEntProp(entity, Prop_Send, "m_bHasPasstimeBall")) {
+		if (GetEntProp(client, Prop_Send, "m_bHasPasstimeBall")) {
 			value = false;
 		}
 
-		int weapon = GetPlayerWeaponSlot(entity, TFWeaponSlot_Grenade); // wtf valve?
-
+		int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Grenade); // wtf valve?
 		if (weapon > 0) {
 			GetEntityClassname(weapon, class, sizeof(class));
 
@@ -6151,7 +6095,6 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int entity, DHookReturn retu
 		}
 
 		returnValue.Value = value;
-
 		return MRES_Override;
 	}
 
@@ -6161,20 +6104,11 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int entity, DHookReturn retu
 MRESReturn DHookCallback_CAmmoPack_MyTouch_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
 	int client = parameters.Get(1);
 	if (
-		client > 0 &&
-		client <= MaxClients
+		GetItemVariant(Wep_Persian) == 1 &&
+		client >= 1 && client <= MaxClients &&
+		TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
 	) {
-		switch (TF2_GetPlayerClass(client)) {
-			case TFClass_DemoMan:
-			{
-				if (
-					GetItemVariant(Wep_Persian) == 1 &&
-					TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
-				) {
-					players[client].deny_metal_collection = true;
-				}
-			}
-		}
+		players[client].deny_metal_collection = true;
 	}
 
 	return MRES_Ignored;
@@ -6330,7 +6264,7 @@ MRESReturn DHookCallback_CTFAmmoPack_MakeHolidayPack(int pThis) {
 }
 #endif
 
-MRESReturn DHookCallback_CTFPlayer_AddToSpyKnife_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
+MRESReturn DHookCallback_CTFPlayer_AddToSpyKnife_Pre(int client, DHookReturn returnValue, DHookParam parameters) {
 	if (ItemIsEnabled(Wep_Spycicle)) {
 		returnValue.Value = false;
 		return MRES_Supercede;
@@ -6341,7 +6275,7 @@ MRESReturn DHookCallback_CTFPlayer_AddToSpyKnife_Pre(int entity, DHookReturn ret
 MRESReturn DHookCallback_CTFPlayer_RegenThink_Pre(int client) {
 	if (
 		!playing_mvm && // Don't proceed if in MvM
-		client >= 1 && client <= MaxClients
+		IsClientInGame(client)
 	) {
 		if (
 			(
@@ -6521,7 +6455,7 @@ MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnVa
 	bool suppress_sound = parameters.Get(3);
 	int ammo_source = parameters.Get(4);
 
-	if (client >= 1 && client <= MaxClients) {
+	if (IsClientInGame(client)) {
 		if (
 			GetItemVariant(Wep_Beggars) == 0 &&
 			player_weapons[client][Wep_Beggars] &&
@@ -6836,10 +6770,7 @@ MRESReturn DHookCallback_CWeaponMedigun_FindAndHealTargets_Pre(int entity) {
 
 MRESReturn DHookCallback_CTFLunchBox_ApplyBiteEffects_Pre(int entity, DHookParam parameters) {
 	int client = parameters.Get(1);
-	if (
-		client >= 1 &&
-		client <= MaxClients
-	) {
+	if (client >= 1 && client <= MaxClients) {
 		players[client].old_health = GetClientHealth(client);
 	}
 	return MRES_Ignored;
@@ -6851,8 +6782,8 @@ MRESReturn DHookCallback_CTFLunchBox_ApplyBiteEffects_Post(int entity, DHookPara
 	if (
 		GetItemVariant(Wep_Dalokohs) == 0 &&
 		(lunchbox_type == LUNCHBOX_CHOCOLATE_BAR || lunchbox_type == LUNCHBOX_FISHCAKE) &&
-		client >= 1 &&
-		client <= MaxClients
+		client >= 1 && client <= MaxClients &&
+		players[client].old_health > 0
 	) {
 		int health_cur = GetClientHealth(client);
 		int health_gained = health_cur - players[client].old_health;
@@ -6862,12 +6793,13 @@ MRESReturn DHookCallback_CTFLunchBox_ApplyBiteEffects_Post(int entity, DHookPara
 				TF2Util_TakeHealth(client, float(heal_amt), TAKEHEALTH_IGNORE_MAXHEALTH);
 			}
 		}
+		players[client].old_health = -1;
 	}
 	return MRES_Ignored;
 }
 
 MRESReturn DHookCallback_CTFPlayer_PickupWeaponFromOther_Post(int client, DHookReturn returnValue, DHookParam parameters) {
-	if (client >= 1 && client <= MaxClients) {
+	if (IsClientInGame(client)) {
 		CacheWeapons(client, false);
 	}
 	return MRES_Ignored;
@@ -7108,17 +7040,14 @@ MRESReturn DHookCallback_CTFPlayerShared_AddCond_Pre(Address pThis, DHookParam p
 MRESReturn DHookCallback_CTFPlayerShared_RemoveCond_Pre(Address pThis, DHookParam parameters) {
 	int client = TF2Util_GetPlayerFromSharedAddress(pThis);
 	if (
-		client >= 1 &&
-		client <= MaxClients &&
-		IsClientInGame(client) &&
-		IsPlayerAlive(client)
+		client >= 1 && client <= MaxClients &&
+		IsClientInGame(client) && IsPlayerAlive(client)
 	) {
-		// This is vastly incomplete for the moment. If other functionality from TF2CondHooks is needed just add it here.
 		TFCond cond = parameters.Get(1);
-		float timeleft = 0.0;
-		int provider = 0;
-		Action action = TF2_OnRemoveCond(client, cond, timeleft, provider);
+		float timeleft = TF2Util_GetPlayerConditionDuration(client, cond);
+		int provider = TF2Util_GetPlayerConditionProvider(client, cond);
 
+		Action action = TF2_OnRemoveCond(client, cond, timeleft, provider);
 		if (action >= Plugin_Handled)
 			return MRES_Supercede;
 	}
@@ -7128,8 +7057,7 @@ MRESReturn DHookCallback_CTFPlayerShared_RemoveCond_Pre(Address pThis, DHookPara
 MRESReturn DHookCallback_CTFPlayer_ApplyPunchImpulseX_Pre(int client, DHookReturn returnValue, DHookParam parameters) {
 	if (
 		ItemIsEnabled(Wep_CozyCamper) &&
-		client >= 1 &&
-		client <= MaxClients
+		IsClientInGame(client)
 	) {
 		if (
 			TF2_GetPlayerClass(client) == TFClass_Sniper &&
@@ -7164,8 +7092,7 @@ MRESReturn DHookCallback_CTFPlayer_ApplyPushFromDamage_Pre(int client, DHookPara
 	int damage_custom = LoadFromAddress(info + CTakeDamageInfo_m_iDamageCustom, NumberType_Int32);
 	if (
 		ItemIsEnabled(Wep_LooseCannon) &&
-		client >= 1 &&
-		client <= MaxClients &&
+		IsClientInGame(client) &&
 		damage_custom == TF_CUSTOM_CANNONBALL_PUSH
 	) {
 		players[client].cannonball_frame = GetGameTickCount();
@@ -7207,8 +7134,7 @@ MRESReturn DHookCallback_CTFPlayer_ApplyPushFromDamage_Pre(int client, DHookPara
 MRESReturn DHookCallback_CTFPlayer_ApplyAbsVelocityImpulse_Pre(int client, DHookParam parameters) {
 	if (
 		ItemIsEnabled(Wep_LooseCannon) &&
-		client >= 1 &&
-		client <= MaxClients
+		IsClientInGame(client)
 	) {
 		//LogMessage("CTFPlayer::ApplyAbsVelocityImpulse(%L)", client);
 
@@ -7363,7 +7289,7 @@ MRESReturn DHookCallback_CTFPlayer_Event_KilledOther_Pre(int client, DHookParam 
 	int wearable = -1;
 	float refill = 0.0;
 	if (
-		client >= 1 && client <= MaxClients &&
+		IsClientInGame(client) &&
 		IsValidEntity(weapon)
 	) {
 		if (
@@ -7413,7 +7339,7 @@ MRESReturn DHookCallback_CTFPlayer_Event_KilledOther_Post(int client, DHookParam
 	Address info = parameters.Get(2);
 	int damage_custom = LoadFromAddress(info + CTakeDamageInfo_m_iDamageCustom, NumberType_Int32);
 	if (
-		client >= 1 && client <= MaxClients &&
+		IsClientInGame(client) &&
 		GetItemVariant(Wep_TideTurner) == 1 &&
 		player_weapons[client][Wep_TideTurner] &&
 		damage_custom == TF_CUSTOM_CHARGE_IMPACT
@@ -7429,7 +7355,7 @@ MRESReturn DHookCallback_CTFPlayer_Event_KilledOther_Post(int client, DHookParam
 
 MRESReturn DHookCallback_CTFPlayer_TakeHealth_Pre(int client, DHookReturn returnValue, DHookParam parameters) {
 	int flags;
-	if (client >= 1 && client <= MaxClients) {
+	if (IsClientInGame(client)) {
 		if (
 			ItemIsEnabled(Wep_Zatoichi) &&
 			players[client].zatoichi_frame == GetGameTickCount()
