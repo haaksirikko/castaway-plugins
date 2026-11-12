@@ -103,7 +103,6 @@ int resistance_mapping[] =
 #define LOADOUT_POSITION_SECONDARY 1
 #define SENTRYGUN_ADD_SHELLS 40
 #define SENTRYGUN_MAX_SHELLS_1 150
-#define OBJ_ATTACHMENT_SAPPER 3
 #define TF_WEAPON_SNIPERRIFLE_CHARGE_PER_SEC 50.0
 #define TF_WEAPON_SNIPERRIFLE_DAMAGE_MAX 150.0
 #define FLIGHT_TIME_TO_MAX_STUN_OLD	1.0
@@ -1033,14 +1032,19 @@ public void OnPluginStart() {
 		dhook_CTFLunchBox_ApplyBiteEffects = DynamicDetour.FromConf(conf, "CTFLunchBox::ApplyBiteEffects");
 		dhook_CTFPlayer_PickupWeaponFromOther = DynamicDetour.FromConf(conf, "CTFPlayer::PickupWeaponFromOther");
 		dhook_CTFDroppedWeapon_ChargeLevelDegradeThink = DynamicDetour.FromConf(conf, "CTFDroppedWeapon::ChargeLevelDegradeThink");
-		dhook_CTFPlayerShared_StunPlayer = DynamicDetour.FromConf(conf, "CTFPlayerShared::StunPlayer");
-		dhook_CTFPlayerShared_AddCond = DynamicDetour.FromConf(conf, "CTFPlayerShared::AddCond");
-		dhook_CTFPlayerShared_RemoveCond = DynamicDetour.FromConf(conf, "CTFPlayerShared::RemoveCond");
 		dhook_CTFPlayer_ApplyPunchImpulseX = DynamicDetour.FromConf(conf, "CTFPlayer::ApplyPunchImpulseX");
 		dhook_CTFWeaponBaseMelee_OnSwingHit = DynamicDetour.FromConf(conf, "CTFWeaponBaseMelee::OnSwingHit");
 		dhook_CTFPlayer_ApplyPushFromDamage = DynamicDetour.FromConf(conf, "CTFPlayer::ApplyPushFromDamage");
 		dhook_CTFPlayer_ApplyAbsVelocityImpulse = DynamicDetour.FromConf(conf, "CTFPlayer::ApplyAbsVelocityImpulse");
 		dhook_CTFProjectile_EnergyRing_ShouldPenetrate = DynamicDetour.FromConf(conf, "CTFProjectile_EnergyRing::ShouldPenetrate");
+
+		// get the signatures for these from sm-tf2.games, reverts.txt holds the function definitions
+		GameData smconf = new GameData("sm-tf2.games");
+		if (smconf == null) SetFailState("Failed to load sm-tf2.games conf");
+		dhook_CTFPlayerShared_StunPlayer = DynamicDetour.FromConf(smconf, "CTFPlayerShared::StunPlayer");
+		dhook_CTFPlayerShared_AddCond = DynamicDetour.FromConf(smconf, "CTFPlayerShared::AddCond");
+		dhook_CTFPlayerShared_RemoveCond = DynamicDetour.FromConf(smconf, "CTFPlayerShared::RemoveCond");
+		delete smconf;
 
 		#define VALIDATE_OFFSET(%1) hook_fail |= ValidateOffset(#%1, %1)
 
@@ -1096,7 +1100,7 @@ public void OnPluginStart() {
 #endif
 
 	{
-		conf = LoadGameConfigFile("sdkhooks.games");
+		conf = new GameData("sdkhooks.games");
 
 		if (conf == null) SetFailState("Failed to load sdkhooks conf");
 
@@ -1899,18 +1903,18 @@ public void OnGameFrame() {
 						if (GetItemVariant(Wep_CleanerCarbine) == 0) {
 							weapon = GetPlayerWeaponSlot(idx, TFWeaponSlot_Secondary);
 
-							if (weapon > 0) {
+							if (
+								weapon > 0 &&
+								HasEntProp(weapon, Prop_Send, "m_flMinicritCharge")
+							) {
+								hype = GetEntPropFloat(weapon, Prop_Send, "m_flMinicritCharge");
+								timer = TF2Attrib_HookValueFloat(0.0, "add_onkill_critboost_time", weapon);
 
-								if (HasEntProp(weapon, Prop_Send, "m_flMinicritCharge")) {
-									hype = GetEntPropFloat(weapon, Prop_Send, "m_flMinicritCharge");
-									timer = TF2Attrib_HookValueFloat(0.0, "add_onkill_critboost_time", weapon);
+								if (timer != 0.0) timer += 1.0;
 
-									if (timer != 0.0) timer += 1.0;
-
-									if (hype > 0.0 && timer > 0.0) {
-										hype -= 100.0 / timer * GetTickInterval();
-										SetEntPropFloat(weapon, Prop_Send, "m_flMinicritCharge", floatMax(hype, 0.0));
-									}
+								if (hype > 0.0 && timer > 0.0) {
+									hype -= 100.0 / timer * GetTickInterval();
+									SetEntPropFloat(weapon, Prop_Send, "m_flMinicritCharge", floatMax(hype, 0.0));
 								}
 							}
 						}
@@ -1932,8 +1936,8 @@ public void OnGameFrame() {
 									effects = GetEntProp(weapon, Prop_Send, "m_fEffects");
 									if (
 										effects & EF_NODRAW &&
-										TF2Attrib_HookValueInt(0, "set_blockbackstab_once", weapon) &&
-										GetEntPropFloat(idx, Prop_Send, "m_flItemChargeMeter", LOADOUT_POSITION_SECONDARY) >= 100.0
+										GetEntPropFloat(idx, Prop_Send, "m_flItemChargeMeter", LOADOUT_POSITION_SECONDARY) >= 100.0 &&
+										TF2Attrib_HookValueInt(0, "set_blockbackstab_once", weapon)
 									) {
 										SetEntProp(weapon, Prop_Send, "m_fEffects", effects & ~EF_NODRAW);
 										break;
@@ -2226,7 +2230,7 @@ public void OnEntityCreated(int entity, const char[] class) {
 		dhook_CTFMinigun_GetWeaponSpread.HookEntity(Hook_Pre, entity, DHookCallback_CTFMinigun_GetWeaponSpread_Pre);
 	}
 	else if (StrEqual(class, "tf_weapon_lunchbox")) {
-		dhook_CTFWeaponBase_SecondaryAttack.HookEntity(Hook_Post, entity, DHookCallback_CTFWeaponBase_SecondaryAttack_Post);
+		dhook_CTFWeaponBase_SecondaryAttack.HookEntity(Hook_Post, entity, DHookCallback_CTFLunchBox_SecondaryAttack_Post);
 	}
 	else if (StrEqual(class, "tf_weapon_mechanical_arm")) {
 		dhook_CTFWeaponBase_PrimaryAttack.HookEntity(Hook_Pre, entity, DHookCallback_CTFWeaponBase_PrimaryAttack_Pre);
@@ -3042,6 +3046,7 @@ public void ApplyRevertsToItem(int entity) {
 		case 220: {
 			// common (also pre-Manniversary Shortstop)
 			if (ItemIsEnabled(Wep_Shortstop)) {
+				TF2Attrib_SetByDefIndex(entity, 128, 0.0); // When weapon is active:
 				TF2Attrib_SetByDefIndex(entity, 241, 1.0); // reload time increased hidden
 				TF2Attrib_SetByDefIndex(entity, 534, 1.0); // airblast vulnerability multiplier hidden
 				TF2Attrib_SetByDefIndex(entity, 535, 1.0); // damage force increase hidden
@@ -3236,12 +3241,11 @@ public Action Event_OnPlayerDeath(Event event, const char[] name, bool dontBroad
 			sentry != -1 &&
 			GetEntProp(sentry, Prop_Send, "m_bPlayerControlled") > 0
 		) {
-			// Offset to m_flShieldFadeTime and input our own value.
 			SetEntDataFloat(sentry, CObjectSentrygun_m_flShieldFadeTime, GetGameTime() + 1.0);
 
-			// Set m_bPlayerControlled to 0 such that the original code
+			// Clear m_bPlayerControlled such that the original code
 			// wouldn't set the shield fade time to 3 seconds, thus undoing our revert.
-			SetEntProp(sentry, Prop_Send, "m_bPlayerControlled", 0);
+			SetEntProp(sentry, Prop_Send, "m_bPlayerControlled", false);
 		}
 	}
 	return Plugin_Continue;
@@ -3285,7 +3289,7 @@ public Action Timer_CacheWeapons(Handle timer, any data) {
 void CacheWeapons(int client, bool spawn_event = false) {
 	bool should_display_info_msg = false;
 
-	//cache players weapons for later funcs
+	// cache players weapons for later funcs
 	{
 
 		for (int i = 0; i < NUM_ITEMS; i++) {
@@ -3714,7 +3718,7 @@ void CacheWeapons(int client, bool spawn_event = false) {
 						if (spawn_event) {
 							// Players don't get set to full health on spawn with this set due to the cache delay
 							// so we give them the health back, but only on spawn, as pickups should not heal
-							TF2Util_TakeHealth(client,25.0);
+							TF2Util_TakeHealth(client, 25.0);
 						}
 					}
 					case Set_TankBuster:
@@ -3753,8 +3757,10 @@ void CacheWeapons(int client, bool spawn_event = false) {
 						player_weapons[client][Set_Saharan] = true;
 						TF2Attrib_SetByDefIndex(client, 159, 0.5); // SET BONUS: cloak blink time penalty
 						TF2Attrib_SetByDefIndex(client, 160, 1.0); // SET BONUS: quiet unstealth
-						if (GetItemVariant(Set_Saharan) == 0 && first_wep != -1)
-						{
+						if (
+							GetItemVariant(Set_Saharan) == 0 &&
+							first_wep != -1
+						) {
 							TF2Attrib_SetByDefIndex(first_wep, 83, 1.0); // +0% cloak duration
 						}
 					}
@@ -3764,26 +3770,26 @@ void CacheWeapons(int client, bool spawn_event = false) {
 	}
 
 	{
-		//honestly this is kind of a silly way of doing it
-		//but it works!
+		// honestly this is kind of a silly way of doing it
+		// but it works!
 		for (int i = 0; i < NUM_ITEMS; i++) {
-			if(prev_player_weapons[client][i] != player_weapons[client][i]) {
+			if (prev_player_weapons[client][i] != player_weapons[client][i]) {
 				should_display_info_msg = true;
 				break;
 			}
 		}
 
-		//help message (on loadout change)
-		if(
+		// help message (on loadout change)
+		if (
 			should_display_info_msg &&
 			cvar_enable.BoolValue &&
-			!g_hClientMessageCookie.GetInt(client, cvar_no_reverts_info_by_default.BoolValue ? 1 : 0) //inverted because the default is zero
+			!g_hClientMessageCookie.GetInt(client, cvar_no_reverts_info_by_default.BoolValue ? 1 : 0) // inverted because the default is zero
 		) {
 			char msg[6][256];
 			int count = 0;
 			int variant_idx;
 			for (int i = 0; i < NUM_ITEMS; i++) {
-				if(
+				if (
 					player_weapons[client][i] &&
 					ItemIsEnabled(i)
 				) {
@@ -3796,12 +3802,12 @@ void CacheWeapons(int client, bool spawn_event = false) {
 			}
 			if (count) {
 				CPrintToChat(client, "{gold}%t", "REVERT_LOADOUT_CHANGE_INIT");
-				for(int i = 0; i < count; i++) {
+				for (int i = 0; i < count; i++) {
 					CPrintToChat(client, "%s", msg[i]);
 				}
-				//one time notice about disabling the help info
+				// one time notice about disabling the help info
 				if (!players[client].received_help_notice) {
-					CPrintToChat(client,"{gold}%t", "REVERT_LOADOUT_CHANGE_DISABLE_HINT");
+					CPrintToChat(client, "{gold}%t", "REVERT_LOADOUT_CHANGE_DISABLE_HINT");
 					players[client].received_help_notice = true;
 				}
 			}
@@ -3812,14 +3818,14 @@ void CacheWeapons(int client, bool spawn_event = false) {
 public Action Event_OnObjectDestroyed(Event event, const char[] name, bool dontBroadcast) {
 	if (
 		ItemIsEnabled(Feat_Sentry) &&
-		event.GetInt("objecttype") == OBJ_ATTACHMENT_SAPPER
+		event.GetInt("objecttype") == view_as<int>(TFObject_Sapper)
 	) {
 		int sapper = event.GetInt("index");
 		if (sapper > 0) {
 
 			int building = GetEntPropEnt(sapper, Prop_Send, "m_hBuiltOnEntity");
 			if (building > 0) {
-				SetEntProp(building, Prop_Send, "m_bPlasmaDisable", 0);
+				SetEntProp(building, Prop_Send, "m_bPlasmaDisable", false);
 			}
 		}
 	}
@@ -5892,53 +5898,6 @@ bool DoShortCircuitProjectileRemoval(int owner, int entity, int base_amount, int
 	return hit;
 }
 
-MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack_Post(int entity) {
-	int owner;
-	char class[64];
-
-	GetEntityClassname(entity, class, sizeof(class));
-	owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-	if (
-		owner > 0 &&
-		StrEqual(class, "tf_weapon_lunchbox")
-	) {
-		int lunchbox = GetEntDataEnt2(entity, CTFLunchBox_m_hThrownPowerUp);
-		if (
-			lunchbox > 0 &&
-			(
-				ItemIsEnabled(Feat_Lunchbox) && player_weapons[owner][Feat_Lunchbox] ||
-				ItemIsEnabled(Wep_Sandvich) && player_weapons[owner][Wep_Sandvich] ||
-				GetItemVariant(Wep_BuffaloSteak) >= 1 && player_weapons[owner][Wep_BuffaloSteak]
-			)
-		) {
-			dhook_CHealthKit_MyTouch.HookEntity(Hook_Pre, lunchbox, DHookCallback_CHealthKit_MyTouch_Pre);
-		}
-	}
-	return MRES_Ignored;
-}
-
-MRESReturn DHookCallback_CTFLunchBox_DrainAmmo_Pre(int entity) {
-	int owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
-
-	if (
-		GetItemVariant(Wep_Sandvich) == 0 &&
-		player_weapons[owner][Wep_Sandvich]
-	) {
-		return MRES_Supercede;
-	}
-
-	// no cooldown when steak is eaten at full health for pre-Manniversary variants
-	if (
-		GetItemVariant(Wep_BuffaloSteak) >= 1 &&
-		player_weapons[owner][Wep_BuffaloSteak] &&
-		GetClientHealth(owner) >= SDKCall(sdkcall_GetMaxHealth, owner)
-	) {
-		return MRES_Supercede;
-	}
-
-	return MRES_Ignored;
-}
-
 MRESReturn DHookCallback_CTFPlayer_OnTauntSucceeded_Post(int entity, DHookParam parameters) {
 	char scene[PLATFORM_MAX_PATH];
 	parameters.GetString(1, scene, sizeof(scene));
@@ -6516,6 +6475,24 @@ MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnVa
 	return MRES_Ignored;
 }
 
+MRESReturn DHookCallback_CTFLunchBox_SecondaryAttack_Post(int entity) {
+	int owner = GetEntityOwner(entity);
+	if (owner >= 1 && owner <= MaxClients) {
+		int lunchbox = GetEntDataEnt2(entity, CTFLunchBox_m_hThrownPowerUp);
+		if (
+			lunchbox > 0 &&
+			(
+				ItemIsEnabled(Feat_Lunchbox) && player_weapons[owner][Feat_Lunchbox] ||
+				ItemIsEnabled(Wep_Sandvich) && player_weapons[owner][Wep_Sandvich] ||
+				GetItemVariant(Wep_BuffaloSteak) >= 1 && player_weapons[owner][Wep_BuffaloSteak]
+			)
+		) {
+			dhook_CHealthKit_MyTouch.HookEntity(Hook_Pre, lunchbox, DHookCallback_CHealthKit_MyTouch_Pre);
+		}
+	}
+	return MRES_Ignored;
+}
+
 MRESReturn DHookCallback_CHealthKit_MyTouch_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
 	int client = parameters.Get(1);
 	if (
@@ -6523,15 +6500,39 @@ MRESReturn DHookCallback_CHealthKit_MyTouch_Pre(int entity, DHookReturn returnVa
 		TF2_GetPlayerClass(client) == TFClass_Heavy
 	) {
 		if (GetClientHealth(client) >= SDKCall(sdkcall_GetMaxHealth, client)) {
-			// If currenthealth above or at max health, do not allow the sandvich to recharge by denying pickup.
+			// Reverted lunchboxes cannot be recharged by picking them up
 			// Heavy can stand over his sandvich all day long and nothing will happen. Blyat.
 			returnValue.Value = false;
 			return MRES_Supercede;
-		} else if (client == GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity")) {
-			// Change the owner of the healthkit sandvich to be 0 aka the world in Prehook.
-			// This prevents the Sandvich from recharging the heavy's meter but still makes him get health from it.
+		}
+		else if (client == GetEntityOwner(entity)) {
+			// Setting owner to 0 makes the Heavy get health from the lunchbox
 			// Sometimes the simplest of solutions are not so obvious when tunnel vision is involved. :)
 			SetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity", 0);
+		}
+	}
+
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFLunchBox_DrainAmmo_Pre(int entity) {
+	int owner = GetEntityOwner(entity);
+
+	if (owner >= 1 && owner <= MaxClients) {
+		if (
+			GetItemVariant(Wep_Sandvich) == 0 &&
+			player_weapons[owner][Wep_Sandvich]
+		) {
+			return MRES_Supercede;
+		}
+
+		// no cooldown when steak is eaten at full health for release
+		if (
+			GetItemVariant(Wep_BuffaloSteak) >= 1 &&
+			player_weapons[owner][Wep_BuffaloSteak] &&
+			GetClientHealth(owner) >= SDKCall(sdkcall_GetMaxHealth, owner)
+		) {
+			return MRES_Supercede;
 		}
 	}
 
@@ -6777,20 +6778,21 @@ MRESReturn DHookCallback_CTFLunchBox_ApplyBiteEffects_Pre(int entity, DHookParam
 }
 
 MRESReturn DHookCallback_CTFLunchBox_ApplyBiteEffects_Post(int entity, DHookParam parameters) {
-	int lunchbox_type = TF2Attrib_HookValueInt(0, "set_weapon_mode", entity);
 	int client = parameters.Get(1);
-	if (
-		GetItemVariant(Wep_Dalokohs) == 0 &&
-		(lunchbox_type == LUNCHBOX_CHOCOLATE_BAR || lunchbox_type == LUNCHBOX_FISHCAKE) &&
-		client >= 1 && client <= MaxClients &&
-		players[client].old_health > 0
-	) {
-		int health_cur = GetClientHealth(client);
-		int health_gained = health_cur - players[client].old_health;
-		if (health_gained < 25) {
-			int heal_amt = intMin(25 - health_gained, 400 - health_cur);
-			if (heal_amt > 0) {
-				TF2Util_TakeHealth(client, float(heal_amt), TAKEHEALTH_IGNORE_MAXHEALTH);
+	if (client >= 1 && client <= MaxClients) {
+		int lunchbox_type = TF2Attrib_HookValueInt(0, "set_weapon_mode", entity);
+		if (
+			GetItemVariant(Wep_Dalokohs) == 0 &&
+			(lunchbox_type == LUNCHBOX_CHOCOLATE_BAR || lunchbox_type == LUNCHBOX_FISHCAKE) &&
+			players[client].old_health > 0
+		) {
+			int health_cur = GetClientHealth(client);
+			int health_gained = health_cur - players[client].old_health;
+			if (health_gained < 25) {
+				int heal_amt = intMin(25 - health_gained, 400 - health_cur);
+				if (heal_amt > 0) {
+					TF2Util_TakeHealth(client, float(heal_amt), TAKEHEALTH_IGNORE_MAXHEALTH);
+				}
 			}
 		}
 		players[client].old_health = -1;
@@ -7012,18 +7014,15 @@ MRESReturn DHookCallback_CTFPlayerShared_StunPlayer_Pre(Address pThis, DHookPara
 MRESReturn DHookCallback_CTFPlayerShared_AddCond_Pre(Address pThis, DHookParam parameters) {
 	int client = TF2Util_GetPlayerFromSharedAddress(pThis);
 	if (
-		client >= 1 &&
-		client <= MaxClients &&
-		IsClientInGame(client) &&
-		IsPlayerAlive(client)
+		client >= 1 && client <= MaxClients &&
+		IsClientInGame(client) && IsPlayerAlive(client)
 	) {
 		TFCond cond = parameters.Get(1);
 		float duration = parameters.Get(2);
 		int provider = GetEntityFromAddress(parameters.Get(3));
-		Action action = TF2_OnAddCond(client, cond, duration, provider);
 
-		if (action == Plugin_Changed)
-		{
+		Action action = TF2_OnAddCond(client, cond, duration, provider);
+		if (action == Plugin_Changed) {
 			parameters.Set(1, cond);
 			parameters.Set(2, duration);
 			if (provider == -1 || provider == 0xFFF)
@@ -7047,8 +7046,25 @@ MRESReturn DHookCallback_CTFPlayerShared_RemoveCond_Pre(Address pThis, DHookPara
 		float timeleft = TF2Util_GetPlayerConditionDuration(client, cond);
 		int provider = TF2Util_GetPlayerConditionProvider(client, cond);
 
+		TFCond oldcond = cond;
+		float oldtime = timeleft;
+
 		Action action = TF2_OnRemoveCond(client, cond, timeleft, provider);
-		if (action >= Plugin_Handled)
+		if (action == Plugin_Changed) {
+			parameters.Set(1, cond);
+
+			if (TF2_IsPlayerInCondition(client, cond)) {
+				TF2Util_SetPlayerConditionDuration(client, cond, timeleft);
+				if (provider == -1 || provider == 0xFFF)
+					provider = 0;
+				TF2Util_SetPlayerConditionProvider(client, cond, provider);
+			}
+
+			if (timeleft != oldtime && cond == oldcond)
+				return MRES_Supercede;
+			return MRES_ChangedHandled;
+		}
+		else if (action >= Plugin_Handled)
 			return MRES_Supercede;
 	}
 	return MRES_Ignored;
@@ -7075,10 +7091,7 @@ MRESReturn DHookCallback_CTFWeaponBaseMelee_OnSwingHit_Pre(int entity, DHookRetu
 	if (ItemIsEnabled(Wep_Disciplinary)) {
 		Address trace = parameters.Get(1);
 		int target = GetEntityFromAddress(LoadFromAddress(trace + CGameTrace_m_pEnt, NumberType_Int32));
-		if (
-			target >= 1 &&
-			target <= MaxClients
-		) {
+		if (target >= 1 && target <= MaxClients) {
 			players[target].whip_frame = GetGameTickCount();
 		}
 	}
@@ -7485,10 +7498,20 @@ TFCond critboosts[] =
 };
 
 stock bool PlayerIsCritboosted(int client) {
-	for (int i = 0; i < sizeof(critboosts); ++i)
-	{
-		if (TF2_IsPlayerInCondition(client, critboosts[i]))
+	for (int i = 0; i < sizeof(critboosts); ++i) {
+		if (TF2_IsPlayerInCondition(client, critboosts[i])) {
+			if (critboosts[i] == TFCond_CritMmmph) {
+				int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+				if (
+					weapon > 0 &&
+					weapon == GetPlayerWeaponSlot(client, TFWeaponSlot_Primary)
+				) {
+					return true;
+				}
+				continue;
+			}
 			return true;
+		}
 	}
 
 	return false;
@@ -7560,8 +7583,7 @@ stock void ParticleShow(const char[] name, float origin[3], float start[3], floa
 	}
 }
 
-stock int PrecacheParticleSystem(const char[] particleSystem)
-{
+stock int PrecacheParticleSystem(const char[] particleSystem) {
 	static int particleEffectNames = INVALID_STRING_TABLE;
 
 	if (particleEffectNames == INVALID_STRING_TABLE) {
@@ -7584,8 +7606,7 @@ stock int PrecacheParticleSystem(const char[] particleSystem)
 	return index;
 }
 
-stock int FindStringIndex2(int tableidx, const char[] str)
-{
+stock int FindStringIndex2(int tableidx, const char[] str) {
 	char buf[1024];
 
 	int numStrings = GetStringTableNumStrings(tableidx);
@@ -7600,29 +7621,23 @@ stock int FindStringIndex2(int tableidx, const char[] str)
 	return INVALID_STRING_INDEX;
 }
 
-stock int GetEntityOwner(int entity)
-{
+stock int GetEntityOwner(int entity) {
 	if (!IsValidEntity(entity))
 		return -1;
 
 	return GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
 }
 
-stock bool AreEntitiesOnSameTeam(int entity1, int entity2)
-{
+stock bool AreEntitiesOnSameTeam(int entity1, int entity2) {
 	if (!IsValidEntity(entity1) || !IsValidEntity(entity2))
 		return false;
 
-	int team1 = GetEntProp(entity1, Prop_Send, "m_iTeamNum");
-	int team2 = GetEntProp(entity2, Prop_Send, "m_iTeamNum");
-
-	return (team1 == team2);
+	return GetEntProp(entity1, Prop_Send, "m_iTeamNum") == GetEntProp(entity2, Prop_Send, "m_iTeamNum");
 }
 
 // Get the sentry of a specific engineer
 // WARNING: Do not use in MVM!
-stock int FindSentryGunOwnedByClient(int client)
-{
+stock int FindSentryGunOwnedByClient(int client) {
 	if (playing_mvm)
 		return -1;
 
@@ -7632,7 +7647,7 @@ stock int FindSentryGunOwnedByClient(int client)
 	int ent = -1;
 	while ((ent = FindEntityByClassname(ent, "obj_sentrygun")) != -1)
 	{
-		int owner = GetEntPropEnt(ent,Prop_Send,"m_hBuilder");
+		int owner = GetEntPropEnt(ent, Prop_Send, "m_hBuilder");
 		if (owner == client)
 			return ent;
 	}
@@ -7641,15 +7656,14 @@ stock int FindSentryGunOwnedByClient(int client)
 }
 
 // Get the built (construction finished) teleporter exit of a specific engineer
-stock int FindBuiltTeleporterExitOwnedByClient(int client)
-{
+stock int FindBuiltTeleporterExitOwnedByClient(int client) {
 	if (!IsClientInGame(client) || GetClientTeam(client) < 2)
 		return -1;
 
 	int ent = -1;
 	while ((ent = FindEntityByClassname(ent, "obj_teleporter")) != -1)
 	{
-		int owner = GetEntPropEnt(ent,Prop_Send,"m_hBuilder");
+		int owner = GetEntPropEnt(ent, Prop_Send, "m_hBuilder");
 		if (
 			owner == client &&
 			GetEntProp(ent, Prop_Send, "m_iState") != 0 && // TELEPORTER_STATE_BUILDING
@@ -7662,8 +7676,7 @@ stock int FindBuiltTeleporterExitOwnedByClient(int client)
 }
 
 // Props to nosoop
-stock int GetEntityFromAddress(Address pEntity)
-{
+stock int GetEntityFromAddress(Address pEntity) {
 	if (pEntity == Address_Null)
 		return -1;
 
