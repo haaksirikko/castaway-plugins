@@ -338,10 +338,10 @@ DynamicHook dhook_CTFWeaponBase_SecondaryAttack;
 DynamicHook dhook_CTFWeaponBase_CanAttack;
 DynamicHook dhook_CTFBaseRocket_GetRadius;
 DynamicHook dhook_CAmmoPack_MyTouch;
-DynamicHook dhook_CObjectSentrygun_OnWrenchHit;
+DynamicHook dhook_CBaseObject_OnWrenchHit;
 DynamicHook dhook_CHealthKit_MyTouch;
 DynamicHook dhook_CTFSniperRifle_SniperRifleChargeRateMod;
-DynamicHook dhook_CObjectSentrygun_StartBuilding;
+DynamicHook dhook_CBaseObject_StartBuilding;
 DynamicHook dhook_CBaseObject_Construct;
 DynamicHook dhook_CTFMinigun_GetProjectileDamage;
 DynamicHook dhook_CTFMinigun_GetWeaponSpread;
@@ -991,10 +991,10 @@ public void OnPluginStart() {
 		dhook_CTFWeaponBase_SecondaryAttack = DynamicHook.FromConf(conf, "CTFWeaponBase::SecondaryAttack");
 		dhook_CTFBaseRocket_GetRadius = DynamicHook.FromConf(conf, "CTFBaseRocket::GetRadius");
 		dhook_CAmmoPack_MyTouch = DynamicHook.FromConf(conf, "CAmmoPack::MyTouch");
-		dhook_CObjectSentrygun_OnWrenchHit = DynamicHook.FromConf(conf, "CObjectSentrygun::OnWrenchHit");
+		dhook_CBaseObject_OnWrenchHit = DynamicHook.FromConf(conf, "CBaseObject::OnWrenchHit");
 		dhook_CHealthKit_MyTouch = DynamicHook.FromConf(conf, "CHealthKit::MyTouch");
 		dhook_CTFSniperRifle_SniperRifleChargeRateMod = DynamicHook.FromConf(conf, "CTFSniperRifle::SniperRifleChargeRateMod");
-		dhook_CObjectSentrygun_StartBuilding = DynamicHook.FromConf(conf, "CObjectSentrygun::StartBuilding");
+		dhook_CBaseObject_StartBuilding = DynamicHook.FromConf(conf, "CBaseObject::StartBuilding");
 		dhook_CBaseObject_Construct = DynamicHook.FromConf(conf, "CBaseObject::Construct");
 		dhook_CTFMinigun_GetProjectileDamage = DynamicHook.FromConf(conf, "CTFMinigun::GetProjectileDamage");
 		dhook_CTFMinigun_GetWeaponSpread = DynamicHook.FromConf(conf, "CTFMinigun::GetWeaponSpread");
@@ -1139,10 +1139,10 @@ public void OnPluginStart() {
 	VALIDATE_HANDLE(dhook_CTFWeaponBase_SecondaryAttack);
 	VALIDATE_HANDLE(dhook_CTFBaseRocket_GetRadius);
 	VALIDATE_HANDLE(dhook_CAmmoPack_MyTouch);
-	VALIDATE_HANDLE(dhook_CObjectSentrygun_OnWrenchHit);
+	VALIDATE_HANDLE(dhook_CBaseObject_OnWrenchHit);
 	VALIDATE_HANDLE(dhook_CHealthKit_MyTouch);
 	VALIDATE_HANDLE(dhook_CTFSniperRifle_SniperRifleChargeRateMod);
-	VALIDATE_HANDLE(dhook_CObjectSentrygun_StartBuilding);
+	VALIDATE_HANDLE(dhook_CBaseObject_StartBuilding);
 	VALIDATE_HANDLE(dhook_CBaseObject_Construct);
 	VALIDATE_HANDLE(dhook_CTFMinigun_GetProjectileDamage);
 	VALIDATE_HANDLE(dhook_CTFMinigun_GetWeaponSpread);
@@ -2188,12 +2188,12 @@ public void OnEntityCreated(int entity, const char[] class) {
 		dhook_CBaseObject_Command_Repair.HookEntity(Hook_Pre, entity, DHookCallback_CBaseObject_Command_Repair_Pre);
 
 		if (StrEqual(class, "obj_sentrygun")) {
-			dhook_CObjectSentrygun_OnWrenchHit.HookEntity(Hook_Pre, entity, DHookCallback_CObjectSentrygun_OnWrenchHit_Pre);
-			dhook_CObjectSentrygun_OnWrenchHit.HookEntity(Hook_Post, entity, DHookCallback_CObjectSentrygun_OnWrenchHit_Post);
-			dhook_CObjectSentrygun_StartBuilding.HookEntity(Hook_Post, entity, DHookCallback_CObjectSentrygun_StartBuilding_Post);
-			dhook_CBaseObject_Construct.HookEntity(Hook_Pre, entity, DHookCallback_CBaseObject_Construct_Pre);
-			dhook_CBaseObject_Construct.HookEntity(Hook_Post, entity, DHookCallback_CBaseObject_Construct_Post);
-			dhook_CBaseObject_InputWrenchHit.HookEntity(Hook_Post, entity, DHookCallback_CBaseObject_InputWrenchHit_Post);
+			dhook_CBaseObject_OnWrenchHit.HookEntity(Hook_Pre, entity, DHookCallback_CObjectSentrygun_OnWrenchHit_Pre);
+			dhook_CBaseObject_OnWrenchHit.HookEntity(Hook_Post, entity, DHookCallback_CObjectSentrygun_OnWrenchHit_Post);
+			dhook_CBaseObject_StartBuilding.HookEntity(Hook_Post, entity, DHookCallback_CObjectSentrygun_StartBuilding_Post);
+			dhook_CBaseObject_Construct.HookEntity(Hook_Pre, entity, DHookCallback_CObjectSentrygun_Construct_Pre);
+			dhook_CBaseObject_Construct.HookEntity(Hook_Post, entity, DHookCallback_CObjectSentrygun_Construct_Post);
+			dhook_CBaseObject_InputWrenchHit.HookEntity(Hook_Post, entity, DHookCallback_CObjectSentrygun_InputWrenchHit_Post);
 		}
 	}
 	else if (StrEqual(class, "instanced_scripted_scene")) {
@@ -2232,12 +2232,12 @@ public void OnEntityCreated(int entity, const char[] class) {
 	}
 	else if (StrEqual(class, "tf_weapon_medigun")) {
 		dhook_CTFWeaponBase_SecondaryAttack.HookEntity(Hook_Pre, entity, DHookCallback_CTFWeaponBase_SecondaryAttack_Pre);
-		dhook_CBaseCombatWeapon_ItemPostFrame.HookEntity(Hook_Pre, entity, DHookCallback_CBaseCombatWeapon_ItemPostFrame_Pre);
+		dhook_CBaseCombatWeapon_ItemPostFrame.HookEntity(Hook_Pre, entity, DHookCallback_CWeaponMedigun_ItemPostFrame_Pre);
 		dhook_CWeaponMedigun_WeaponReset.HookEntity(Hook_Pre, entity, DHookCallback_CWeaponMedigun_WeaponReset_Pre);
 		dhook_CWeaponMedigun_WeaponReset.HookEntity(Hook_Post, entity, DHookCallback_CWeaponMedigun_WeaponReset_Post);
 	}
 	else if (StrStartsWith(class, "tf_weapon_sniperrifle")) {
-		dhook_CBaseCombatWeapon_ItemPostFrame.HookEntity(Hook_Post, entity, DHookCallback_CBaseCombatWeapon_ItemPostFrame_Post);
+		dhook_CBaseCombatWeapon_ItemPostFrame.HookEntity(Hook_Post, entity, DHookCallback_CTFSniperRifle_ItemPostFrame_Post);
 
 		if (StrEqual(class, "tf_weapon_sniperrifle_decap")) {
 			dhook_CTFWeaponBase_PrimaryAttack.HookEntity(Hook_Pre, entity, DHookCallback_CTFWeaponBase_PrimaryAttack_Pre);
@@ -2281,36 +2281,32 @@ public void TF2_OnConditionAdded(int client, TFCond condition) {
 }
 
 public void TF2_OnConditionRemoved(int client, TFCond condition) {
-	if (
-		ItemIsEnabled(Wep_Sandman) &&
-		condition == TFCond_Dazed
-	) {
-		// fix weapons being invisible after sandman stun
-
-		int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
-		if (weapon > 0) {
-			int effects = GetEntProp(weapon, Prop_Send, "m_fEffects");
-			if (effects & EF_NODRAW) {
-				SetEntProp(weapon, Prop_Send, "m_fEffects", effects & ~EF_NODRAW);
-			}
-		}
-	}
-
-	switch (TF2_GetPlayerClass(client)) {
-		case TFClass_Scout: {
+	switch (condition) {
+		case TFCond_Cloaked: {
 			if (
-				GetItemVariant(Wep_CritCola) == 1 &&
-				player_weapons[client][Wep_CritCola] &&
-				condition == TFCond_CritCola
+				ItemIsEnabled(Wep_DeadRinger) &&
+				player_weapons[client][Wep_DeadRinger]
 			) {
-				// mark-for-death when buff expires
-				TF2_AddCondition(client, TFCond_MarkedForDeathSilent, 2.0, 0);
+				float cloak = -1.0;
+
+				switch (GetItemVariant(Wep_DeadRinger)) {
+					case 0, 2: { // pre-GM
+						// when uncloaking, cloak is drained to 40%
+						cloak = 40.0;
+					}
+				}
+
+				if (
+					cloak != -1.0 &&
+					GetEntPropFloat(client, Prop_Send, "m_flCloakMeter") > cloak
+				) {
+					SetEntPropFloat(client, Prop_Send, "m_flCloakMeter", cloak);
+				}
 			}
 		}
-		case TFClass_Engineer: {
+		case TFCond_Taunting: {
 			if (
 				ItemIsEnabled(Wep_EurekaEffect) &&
-				condition == TFCond_Taunting &&
 				IsPlayerAlive(client) &&
 				GetEntData(client, CTFPlayer_m_bIsTeleportingUsingEurekaEffect, 1)
 			) {
@@ -2329,36 +2325,30 @@ public void TF2_OnConditionRemoved(int client, TFCond condition) {
 					TF2_RegeneratePlayer(client);
 				}
 			}
-		}
-		case TFClass_Medic: {
-			if (
-				condition == TFCond_Taunting &&
-				players[client].medic_amputator_current_uber >= 0.0
-			) {
+			if (players[client].medic_amputator_current_uber >= 0.0) {
 				players[client].medic_amputator_current_uber = -1.0;
 			}
 		}
-		case TFClass_Spy: {
-			if (
-				ItemIsEnabled(Wep_DeadRinger) &&
-				player_weapons[client][Wep_DeadRinger] &&
-				condition == TFCond_Cloaked
-			) {
-				float cloak = -1.0;
+		case TFCond_Dazed: {
+			if (ItemIsEnabled(Wep_Sandman)) {
+				// fix weapons being invisible after sandman stun
 
-				switch (GetItemVariant(Wep_DeadRinger)) {
-					case 0, 2: { // pre-GM
-						// when uncloaking, cloak is drained to 40%
-						cloak = 40.0;
+				int weapon = GetEntPropEnt(client, Prop_Send, "m_hActiveWeapon");
+				if (weapon > 0) {
+					int effects = GetEntProp(weapon, Prop_Send, "m_fEffects");
+					if (effects & EF_NODRAW) {
+						SetEntProp(weapon, Prop_Send, "m_fEffects", effects & ~EF_NODRAW);
 					}
 				}
-
-				if (
-					cloak != -1.0 &&
-					GetEntPropFloat(client, Prop_Send, "m_flCloakMeter") > cloak
-				) {
-					SetEntPropFloat(client, Prop_Send, "m_flCloakMeter", cloak);
-				}
+			}
+		}
+		case TFCond_CritCola: {
+			if (
+				GetItemVariant(Wep_CritCola) == 1 &&
+				player_weapons[client][Wep_CritCola]
+			) {
+				// mark-for-death when buff expires
+				TF2_AddCondition(client, TFCond_MarkedForDeathSilent, 2.0, 0);
 			}
 		}
 	}
@@ -2449,10 +2439,11 @@ public Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &pro
 		) {
 			int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
 
-			if (weapon > 0) {
-				if (HasEntProp(weapon, Prop_Send, "m_flMinicritCharge")) {
-					SetEntPropFloat(weapon, Prop_Send, "m_flMinicritCharge", 99.5);
-				}
+			if (
+				weapon > 0 &&
+				HasEntProp(weapon, Prop_Send, "m_flMinicritCharge")
+			) {
+				SetEntPropFloat(weapon, Prop_Send, "m_flMinicritCharge", 99.5);
 			}
 		}
 	}
@@ -6379,11 +6370,7 @@ MRESReturn DHookCallback_CTFPlayer_RegenThink_Post(int client) {
 
 MRESReturn DHookCallback_CObjectSentrygun_OnWrenchHit_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
 	// Fake the sentry being unshielded to allow for full repair.
-	if (
-		ItemIsEnabled(Wep_Wrangler) &&
-		IsValidEntity(entity) &&
-		HasEntProp(entity, Prop_Send, "m_nShieldLevel")
-	) {
+	if (ItemIsEnabled(Wep_Wrangler)) {
 		entities[entity].old_shield = GetEntProp(entity, Prop_Send, "m_nShieldLevel");
 		SetEntProp(entity, Prop_Send, "m_nShieldLevel", SHIELD_NONE);
 	}
@@ -6432,11 +6419,7 @@ MRESReturn DHookCallback_CObjectSentrygun_OnWrenchHit_Pre(int entity, DHookRetur
 
 MRESReturn DHookCallback_CObjectSentrygun_OnWrenchHit_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
 	// Revert the sentry's shield.
-	if (
-		ItemIsEnabled(Wep_Wrangler) &&
-		IsValidEntity(entity) &&
-		HasEntProp(entity, Prop_Send, "m_nShieldLevel")
-	) {
+	if (ItemIsEnabled(Wep_Wrangler)) {
 		SetEntProp(entity, Prop_Send, "m_nShieldLevel", entities[entity].old_shield);
 	}
 
@@ -6455,7 +6438,7 @@ MRESReturn DHookCallback_CObjectSentrygun_StartBuilding_Post(int entity, DHookRe
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CBaseObject_Construct_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
+MRESReturn DHookCallback_CObjectSentrygun_Construct_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
 	if (
 		ItemIsEnabled(Wep_Gunslinger) &&
 		GetEntProp(entity, Prop_Send, "m_bBuilding") &&
@@ -6466,7 +6449,7 @@ MRESReturn DHookCallback_CBaseObject_Construct_Pre(int entity, DHookReturn retur
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CBaseObject_Construct_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
+MRESReturn DHookCallback_CObjectSentrygun_Construct_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
 	if (
 		ItemIsEnabled(Wep_Gunslinger) &&
 		GetEntProp(entity, Prop_Send, "m_bBuilding") &&
@@ -6495,23 +6478,20 @@ MRESReturn DHookCallback_CBaseObject_Construct_Post(int entity, DHookReturn retu
 }
 
 MRESReturn DHookCallback_CBaseObject_OnConstructionHit_Pre(int entity, DHookParam parameters) {
-	char class[64];
 	entities[entity].construction_hit = false;
 	if (
 		ItemIsEnabled(Wep_Gunslinger) &&
-		GetEntProp(entity, Prop_Send, "m_bMiniBuilding")
+		GetEntProp(entity, Prop_Send, "m_bMiniBuilding") &&
+		HasEntProp(entity, Prop_Send, "m_nShieldLevel")
 	) {
-		GetEntityClassname(entity, class, sizeof(class));
-		if (StrEqual(class, "obj_sentrygun")) {
-			// Do not allow mini sentries to be construction boosted.
-			entities[entity].construction_hit = true;
-			return MRES_Supercede;
-		}
+		// Do not allow mini sentries to be construction boosted.
+		entities[entity].construction_hit = true;
+		return MRES_Supercede;
 	}
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CBaseObject_InputWrenchHit_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
+MRESReturn DHookCallback_CObjectSentrygun_InputWrenchHit_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
 	if (entities[entity].construction_hit) {
 		entities[entity].construction_hit = false;
 
@@ -6536,15 +6516,12 @@ MRESReturn DHookCallback_CBaseObject_CreateAmmoPack_Pre(int entity, DHookReturn 
 }
 
 MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnValue, DHookParam parameters) {
-	if (
-		client > 0 &&
-		client <= MaxClients
-	) {
-		int amount = parameters.Get(1);
-		int ammo_idx = parameters.Get(2);
-		bool suppress_sound = parameters.Get(3);
-		int ammo_source = parameters.Get(4);
+	int amount = parameters.Get(1);
+	int ammo_idx = parameters.Get(2);
+	bool suppress_sound = parameters.Get(3);
+	int ammo_source = parameters.Get(4);
 
+	if (client >= 1 && client <= MaxClients) {
 		if (
 			GetItemVariant(Wep_Beggars) == 0 &&
 			player_weapons[client][Wep_Beggars] &&
@@ -6560,25 +6537,22 @@ MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnVa
 			ItemIsEnabled(Wep_Persian) &&
 			TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
 		) {
-			if (ammo_idx == TF_AMMO_METAL) {
-				if (
+			if (
+				ammo_idx == TF_AMMO_METAL &&
+				(
 					GetItemVariant(Wep_Persian) == 0 ||
 					players[client].deny_metal_collection
-				) {
-					players[client].deny_metal_collection = false;
-					return MRES_Ignored;
-				}
+				)
+			) {
+				players[client].deny_metal_collection = false;
+				return MRES_Ignored;
 			}
 
 			// Ammo from ground pickups is converted to health.
 			if (ammo_source == kAmmoSource_Pickup) {
 				int iTakenHealth = TF2Util_TakeHealth(client, float(amount));
-				if (iTakenHealth > 0)
-				{
-					if (!suppress_sound)
-					{
-						EmitGameSoundToAll("BaseCombatCharacter.AmmoPickup", client);
-					}
+				if (iTakenHealth > 0) {
+					if (!suppress_sound) EmitGameSoundToAll("BaseCombatCharacter.AmmoPickup", client);
 
 					// Fire heal event
 					Event event = CreateEvent("player_healonhit", true);
@@ -6586,10 +6560,10 @@ MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnVa
 					event.SetInt("entindex", client);
 					event.Fire();
 
-					// remove afterburn and bleed debuffs on heal
-					TF2_RemoveCondition(client, TFCond_OnFire);
-					TF2_RemoveCondition(client, TFCond_Bleeding);
-					TF2_RemoveCondition(client, TFCond_Plague);
+					// remove health draining debuffs on heal
+					if (TF2_IsPlayerInCondition(client, TFCond_OnFire)) TF2_RemoveCondition(client, TFCond_OnFire);
+					if (TF2_IsPlayerInCondition(client, TFCond_Bleeding)) TF2_RemoveCondition(client, TFCond_Bleeding);
+					if (TF2_IsPlayerInCondition(client, TFCond_Plague)) TF2_RemoveCondition(client, TFCond_Plague);
 				}
 				returnValue.Value = iTakenHealth;
 				return MRES_Supercede;
@@ -6605,7 +6579,6 @@ MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnVa
 			}
 		}
 	}
-
 	return MRES_Ignored;
 }
 
@@ -6725,11 +6698,10 @@ MRESReturn DHookCallback_CTFPlayerShared_AddToSpyCloakMeter_Pre(Address pThis, D
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CBaseCombatWeapon_ItemPostFrame_Pre(int entity) {
+MRESReturn DHookCallback_CWeaponMedigun_ItemPostFrame_Pre(int entity) {
 	int owner = GetEntityOwner(entity);
 	if (
 		GetItemVariant(Wep_Vaccinator) == 1 &&
-		GetEntProp(entity, Prop_Send, "m_iItemDefinitionIndex") == 998 &&
 		owner >= 1 && owner <= MaxClients &&
 		players[owner].using_vaccinator_uber
 	) {
@@ -6739,9 +6711,8 @@ MRESReturn DHookCallback_CBaseCombatWeapon_ItemPostFrame_Pre(int entity) {
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CBaseCombatWeapon_ItemPostFrame_Post(int entity) {
+MRESReturn DHookCallback_CTFSniperRifle_ItemPostFrame_Post(int entity) {
 	// Scope jump revert: remove "no_jump" attribute after firing
-	// For the moment, this is only hooked for sniper rifles, so no extra checking is necessary
 	if (
 		ItemIsEnabled(Feat_SniperRifle) &&
 		TF2Attrib_HookValueFloat(0.0, "no_jump", entity) > 0.0
