@@ -2219,7 +2219,6 @@ public void OnEntityCreated(int entity, const char[] class) {
 		dhook_CTFWeaponBaseMelee_GetMeleeDamage.HookEntity(Hook_Post, entity, DHookCallback_CTFWeaponBaseMelee_GetMeleeDamage_Post);
 		dhook_CBaseCombatWeapon_Deploy.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_Deploy_Post);
 		dhook_CBaseCombatWeapon_Holster.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_Holster_Post);
-		dhook_CTFWeaponBase_GetSpeedMod.HookEntity(Hook_Pre, entity, DHookCallback_CTFShovel_GetSpeedMod_Pre);
 		dhook_CTFWeaponBase_GetSpeedMod.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_GetSpeedMod_Post);
 	}
 	else if (StrEqual(class, "tf_weapon_stickbomb")) {
@@ -2408,7 +2407,7 @@ Action TF2_OnAddCond(int client, TFCond &condition, float &time, int &provider) 
 				players[client].mmmph_use_frame = GetGameTickCount();
 
 				// Refill health on mmmph activation
-				int health_max = SDKCall(sdkcall_GetMaxHealth, client);
+				int health_max = GetMaxHealth(client);
 				if (GetClientHealth(client) < health_max) {
 					SetEntProp(client, Prop_Send, "m_iHealth", health_max);
 				}
@@ -4634,7 +4633,7 @@ Action SDKHookCB_OnTakeDamageAlive(
 				if (spunup_resist > 0.0 && spunup_resist != 1.0) {
 
 					// apply resistance only when above 50% of max health
-					if ((float(GetClientHealth(victim)) - damage) / float(SDKCall(sdkcall_GetMaxHealth, victim)) > 0.5) {
+					if ((float(GetClientHealth(victim)) - damage) / float(GetMaxHealth(victim)) > 0.5) {
 
 						// play damage resist sound
 						EmitGameSoundToAll("Player.ResistanceLight", victim);
@@ -5495,8 +5494,7 @@ void ShowClassReverts(int client) {
 }
 
 void ToggleLoadoutInfo(int client) {
-	if (AreClientCookiesCached(client))
-	{
+	if (AreClientCookiesCached(client)) {
 		int config_value = g_hClientMessageCookie.GetInt(client, cvar_no_reverts_info_by_default.BoolValue ? 1 : 0);
 		ReplyToCommand(client, "%t", config_value ? "REVERT_LOADOUT_CHANGE_ENABLED" : "REVERT_LOADOUT_CHANGE_DISABLED");
 		g_hClientMessageCookie.SetInt(client, config_value ? 0 : 1);
@@ -5541,7 +5539,7 @@ bool TraceFilter_CustomShortCircuit(int entity, int contentsmask, any data) {
 		return false;
 	}
 
-	//PrintToChatAll("Short Circuit trace hit blocked by %s", class);
+	//LogMessage("Short Circuit trace hit blocked by %s", class);
 
 	return true;
 }
@@ -5930,8 +5928,8 @@ MRESReturn DHookCallback_CTFBaseRocket_GetRadius_Post(int entity, DHookReturn re
 
 MRESReturn DHookCallback_CTFPlayer_CalculateMaxSpeed_Post(int client, DHookReturn returnValue) {
 	if (
-		IsValidEntity(client) &&
-		IsClientInGame(client)
+		IsClientInGame(client) &&
+		IsPlayerAlive(client)
 	) {
 		float multiplier = 1.0;
 
@@ -6499,7 +6497,7 @@ MRESReturn DHookCallback_CHealthKit_MyTouch_Pre(int entity, DHookReturn returnVa
 		client >= 1 && client <= MaxClients &&
 		TF2_GetPlayerClass(client) == TFClass_Heavy
 	) {
-		if (GetClientHealth(client) >= SDKCall(sdkcall_GetMaxHealth, client)) {
+		if (GetClientHealth(client) >= GetMaxHealth(client)) {
 			// Reverted lunchboxes cannot be recharged by picking them up
 			// Heavy can stand over his sandvich all day long and nothing will happen. Blyat.
 			returnValue.Value = false;
@@ -6530,7 +6528,7 @@ MRESReturn DHookCallback_CTFLunchBox_DrainAmmo_Pre(int entity) {
 		if (
 			GetItemVariant(Wep_BuffaloSteak) >= 1 &&
 			player_weapons[owner][Wep_BuffaloSteak] &&
-			GetClientHealth(owner) >= SDKCall(sdkcall_GetMaxHealth, owner)
+			GetClientHealth(owner) >= GetMaxHealth(owner)
 		) {
 			return MRES_Supercede;
 		}
@@ -6726,7 +6724,7 @@ MRESReturn DHookCallback_CWeaponMedigun_FindAndHealTargets_Pre(int entity) {
 		if (patient >= 1 && patient <= MaxClients)
 		{
 			health_cur = GetClientHealth(patient);
-			health_max = SDKCall(sdkcall_GetMaxHealth, patient);
+			health_max = GetMaxHealth(patient);
 			health_max_boost = RoundToFloor(float(TF2Util_GetPlayerMaxHealthBoost(patient)) * 0.95);
 			overheal_blocked = false;
 
@@ -7212,9 +7210,7 @@ MRESReturn DHookCallback_CTFWeaponBaseMelee_GetMeleeDamage_Post(int entity, DHoo
 				default: multiplier = 1.65; // 107 damage at 1 HP; failsafe
 			}
 
-			float health_cur = float(GetClientHealth(owner));
-			float health_max = float(SDKCall(sdkcall_GetMaxHealth, owner));
-			float health_ratio = health_cur / health_max;
+			float health_ratio = float(GetClientHealth(owner)) / float(GetMaxHealth(owner));
 			multiplier = ValveRemapVal(health_ratio, 0.0, 1.0, multiplier, 0.5) / ValveRemapVal(health_ratio, 0.0, 1.0, 1.65, 0.5);
 		}
 		else if (
@@ -7398,7 +7394,7 @@ MRESReturn DHookCallback_CTFPlayer_TakeHealth_Pre(int client, DHookReturn return
 MRESReturn DHookCallback_CTFShovel_Deploy_Post(int entity, DHookReturn returnValue) {
 	if (
 		ItemIsEnabled(Wep_Pickaxe) &&
-		TF2Attrib_HookValueInt(0, "set_weapon_mode", entity) == SHOVEL_SPEED_BOOST
+		TF2Attrib_HookValueInt(SHOVEL_STANDARD, "set_weapon_mode", entity) == SHOVEL_SPEED_BOOST
 	) {
 		// Set damage boost after deploying
 		SetShovelDamageBoost(entity);
@@ -7408,7 +7404,7 @@ MRESReturn DHookCallback_CTFShovel_Deploy_Post(int entity, DHookReturn returnVal
 MRESReturn DHookCallback_CTFShovel_Holster_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
 	if (
 		ItemIsEnabled(Wep_Pickaxe) &&
-		TF2Attrib_HookValueInt(0, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST
+		TF2Attrib_HookValueInt(SHOVEL_STANDARD, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST
 	) {
 		// Set speed boost after holstering. This should help with client prediction when deployed.
 		SetShovelSpeedBoost(entity);
@@ -7416,21 +7412,24 @@ MRESReturn DHookCallback_CTFShovel_Holster_Post(int entity, DHookReturn returnVa
 	return MRES_Ignored;
 }
 
-MRESReturn DHookCallback_CTFShovel_GetSpeedMod_Pre(int entity, DHookReturn returnValue) {
-	if (
-		ItemIsEnabled(Wep_Pickaxe) &&
-		TF2Attrib_HookValueInt(0, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST
-	) {
-		SetShovelSpeedBoost(entity);
-	}
-	return MRES_Ignored;
-}
 MRESReturn DHookCallback_CTFShovel_GetSpeedMod_Post(int entity, DHookReturn returnValue) {
+	int owner = GetEntityOwner(entity);
 	if (
 		ItemIsEnabled(Wep_Pickaxe) &&
-		TF2Attrib_HookValueInt(0, "set_weapon_mode", entity) == SHOVEL_SPEED_BOOST
+		TF2Attrib_HookValueInt(SHOVEL_STANDARD, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST &&
+		owner >= 1 && owner <= MaxClients &&
+		IsClientInGame(owner) &&
+		IsPlayerAlive(owner)
 	) {
-		SetShovelDamageBoost(entity);
+		float health_ratio = float(GetClientHealth(owner)) / float(GetMaxHealth(owner));
+
+		if (health_ratio > 0.8)			return MRES_Ignored;
+		else if (health_ratio > 0.6) 	returnValue.Value = 1.1;
+		else if (health_ratio > 0.4) 	returnValue.Value = 1.2;
+		else if (health_ratio > 0.2) 	returnValue.Value = 1.4;
+		else 							returnValue.Value = 1.6;
+
+		return MRES_Override;
 	}
 	return MRES_Ignored;
 }
@@ -7444,6 +7443,7 @@ MRESReturn DHookCallback_CTFGameRules_PlayerMayCapturePoint_Pre(Address _this, D
 		!PlayerIsUbered(client) &&
 		TF2_IsPlayerInCondition(client, TFCond_MegaHeal)
 	) {
+		// Fake MvM gamerule to allow capturing while Quick-Fix ubered
 		GameRules_SetProp("m_bPlayingMannVsMachine", true, 1);
 	}
 	return MRES_Ignored;
@@ -7513,8 +7513,11 @@ stock bool PlayerIsCritboosted(int client) {
 			return true;
 		}
 	}
-
 	return false;
+}
+
+stock int GetMaxHealth(int entity) {
+	return SDKCall(sdkcall_GetMaxHealth, entity);
 }
 
 stock void ParticleShowSimple(const char[] name, float position[3]) {
