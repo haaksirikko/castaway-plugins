@@ -328,7 +328,7 @@ Handle sdkcall_GetMaxHealth;
 Handle sdkcall_CBaseObject_GetReversesBuildingConstructionSpeed;
 Handle sdkcall_CTFWeaponBaseGun_GetProjectileDamage;
 Handle sdkcall_CTFWeaponBaseGun_GetWeaponSpread;
-Handle sdkcall_CWeaponMedigun_CanAttack;
+Handle sdkcall_CTFWeaponBase_CanAttack;
 Handle sdkcall_CTFSniperRifle_SniperRifleChargeRateMod;
 Handle sdkcall_CTFWeaponBase_SecondaryAttack;
 
@@ -336,9 +336,8 @@ DynamicHook dhook_CTFWeaponBase_PrimaryAttack;
 DynamicHook dhook_CTFWeaponBase_SecondaryAttack;
 DynamicHook dhook_CTFWeaponBase_CanAttack;
 DynamicHook dhook_CTFBaseRocket_GetRadius;
-DynamicHook dhook_CAmmoPack_MyTouch;
+DynamicHook dhook_CTFPowerup_MyTouch;
 DynamicHook dhook_CBaseObject_OnWrenchHit;
-DynamicHook dhook_CHealthKit_MyTouch;
 DynamicHook dhook_CTFSniperRifle_SniperRifleChargeRateMod;
 DynamicHook dhook_CBaseObject_StartBuilding;
 DynamicHook dhook_CBaseObject_Construct;
@@ -972,9 +971,9 @@ public void OnPluginStart() {
 		sdkcall_CTFWeaponBaseGun_GetWeaponSpread = EndPrepSDKCall();
 
 		StartPrepSDKCall(SDKCall_Entity);
-		PrepSDKCall_SetFromConf(conf, SDKConf_Virtual, "CWeaponMedigun::CanAttack");
+		PrepSDKCall_SetFromConf(conf, SDKConf_Virtual, "CTFWeaponBase::CanAttack");
 		PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-		sdkcall_CWeaponMedigun_CanAttack = EndPrepSDKCall();
+		sdkcall_CTFWeaponBase_CanAttack = EndPrepSDKCall();
 
 		StartPrepSDKCall(SDKCall_Entity);
 		PrepSDKCall_SetFromConf(conf, SDKConf_Virtual, "CTFSniperRifle::SniperRifleChargeRateMod");
@@ -988,9 +987,8 @@ public void OnPluginStart() {
 		dhook_CTFWeaponBase_PrimaryAttack = DynamicHook.FromConf(conf, "CTFWeaponBase::PrimaryAttack");
 		dhook_CTFWeaponBase_SecondaryAttack = DynamicHook.FromConf(conf, "CTFWeaponBase::SecondaryAttack");
 		dhook_CTFBaseRocket_GetRadius = DynamicHook.FromConf(conf, "CTFBaseRocket::GetRadius");
-		dhook_CAmmoPack_MyTouch = DynamicHook.FromConf(conf, "CAmmoPack::MyTouch");
+		dhook_CTFPowerup_MyTouch = DynamicHook.FromConf(conf, "CTFPowerup::MyTouch");
 		dhook_CBaseObject_OnWrenchHit = DynamicHook.FromConf(conf, "CBaseObject::OnWrenchHit");
-		dhook_CHealthKit_MyTouch = DynamicHook.FromConf(conf, "CHealthKit::MyTouch");
 		dhook_CTFSniperRifle_SniperRifleChargeRateMod = DynamicHook.FromConf(conf, "CTFSniperRifle::SniperRifleChargeRateMod");
 		dhook_CBaseObject_StartBuilding = DynamicHook.FromConf(conf, "CBaseObject::StartBuilding");
 		dhook_CBaseObject_Construct = DynamicHook.FromConf(conf, "CBaseObject::Construct");
@@ -1133,16 +1131,15 @@ public void OnPluginStart() {
 	VALIDATE_HANDLE(sdkcall_CBaseObject_GetReversesBuildingConstructionSpeed);
 	VALIDATE_HANDLE(sdkcall_CTFWeaponBaseGun_GetProjectileDamage);
 	VALIDATE_HANDLE(sdkcall_CTFWeaponBaseGun_GetWeaponSpread);
-	VALIDATE_HANDLE(sdkcall_CWeaponMedigun_CanAttack);
+	VALIDATE_HANDLE(sdkcall_CTFWeaponBase_CanAttack);
 	VALIDATE_HANDLE(sdkcall_CTFSniperRifle_SniperRifleChargeRateMod);
 	VALIDATE_HANDLE(sdkcall_CTFWeaponBase_SecondaryAttack);
 
 	VALIDATE_HANDLE(dhook_CTFWeaponBase_PrimaryAttack);
 	VALIDATE_HANDLE(dhook_CTFWeaponBase_SecondaryAttack);
 	VALIDATE_HANDLE(dhook_CTFBaseRocket_GetRadius);
-	VALIDATE_HANDLE(dhook_CAmmoPack_MyTouch);
+	VALIDATE_HANDLE(dhook_CTFPowerup_MyTouch);
 	VALIDATE_HANDLE(dhook_CBaseObject_OnWrenchHit);
-	VALIDATE_HANDLE(dhook_CHealthKit_MyTouch);
 	VALIDATE_HANDLE(dhook_CTFSniperRifle_SniperRifleChargeRateMod);
 	VALIDATE_HANDLE(dhook_CBaseObject_StartBuilding);
 	VALIDATE_HANDLE(dhook_CBaseObject_Construct);
@@ -2248,7 +2245,7 @@ public void OnEntityCreated(int entity, const char[] class) {
 		dhook_CTFRevolver_CanFireCriticalShot.HookEntity(Hook_Pre, entity, DHookCallback_CTFRevolver_CanFireCriticalShot_Pre);
 	}
 	else if (StrStartsWith(class, "item_ammopack")) {
-		dhook_CAmmoPack_MyTouch.HookEntity(Hook_Pre, entity, DHookCallback_CAmmoPack_MyTouch_Pre);
+		dhook_CTFPowerup_MyTouch.HookEntity(Hook_Pre, entity, DHookCallback_CAmmoPack_MyTouch_Pre);
 	}
 }
 
@@ -5771,7 +5768,7 @@ MRESReturn DHookCallback_CTFWeaponBase_SecondaryAttack_Pre(int entity) {
 				return MRES_Supercede;
 			else if (
 				GetEntPropFloat(entity, Prop_Send, "m_flChargeLevel") >= 0.25 &&
-				SDKCall(sdkcall_CWeaponMedigun_CanAttack, entity)
+				SDKCall(sdkcall_CTFWeaponBase_CanAttack, entity)
 			) {
 				players[owner].using_vaccinator_uber = true;
 				players[owner].vaccinator_charge = float(RoundToFloor(GetEntPropFloat(entity, Prop_Send, "m_flChargeLevel") * 4.0)) * 0.25;
@@ -6060,14 +6057,14 @@ MRESReturn DHookCallback_CTFPlayer_CanDisguise_Post(int client, DHookReturn retu
 
 MRESReturn DHookCallback_CAmmoPack_MyTouch_Pre(int entity, DHookReturn returnValue, DHookParam parameters) {
 	int client = parameters.Get(1);
-	if (
-		GetItemVariant(Wep_Persian) == 1 &&
-		client >= 1 && client <= MaxClients &&
-		TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
-	) {
-		players[client].deny_metal_collection = true;
+	if (client >= 1 && client <= MaxClients) {
+		if (
+			GetItemVariant(Wep_Persian) == 1 &&
+			TF2Attrib_HookValueInt(0, "ammo_becomes_health", client) == 1
+		) {
+			players[client].deny_metal_collection = true;
+		}
 	}
-
 	return MRES_Ignored;
 }
 
@@ -6485,7 +6482,7 @@ MRESReturn DHookCallback_CTFLunchBox_SecondaryAttack_Post(int entity) {
 				GetItemVariant(Wep_BuffaloSteak) >= 1 && player_weapons[owner][Wep_BuffaloSteak]
 			)
 		) {
-			dhook_CHealthKit_MyTouch.HookEntity(Hook_Pre, lunchbox, DHookCallback_CHealthKit_MyTouch_Pre);
+			dhook_CTFPowerup_MyTouch.HookEntity(Hook_Pre, lunchbox, DHookCallback_CHealthKit_MyTouch_Pre);
 		}
 	}
 	return MRES_Ignored;
