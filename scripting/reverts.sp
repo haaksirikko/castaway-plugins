@@ -1489,6 +1489,7 @@ public void OnGameFrame() {
 	int airdash_limit_old;
 	int airdash_limit_new;
 	int effects;
+	int count;
 
 	frame++;
 
@@ -1919,8 +1920,8 @@ public void OnGameFrame() {
 							ItemIsEnabled(Wep_Razorback) &&
 							player_weapons[idx][Wep_Razorback]
 						) {
-							for (int i = 0; i < TF2Util_GetPlayerWearableCount(idx); i++)
-							{
+							count = TF2Util_GetPlayerWearableCount(idx);
+							for (int i = 0; i < count; i++) {
 								weapon = TF2Util_GetPlayerWearable(idx, i);
 
 								if (weapon > 0) {
@@ -1987,8 +1988,8 @@ public void OnGameFrame() {
 										}
 									}
 									else if (cond == TFCond_Bleeding) {
-										int bleeds = TF2Util_GetPlayerActiveBleedCount(idx);
-										for (int j = 0; j < bleeds; ++j) {
+										count = TF2Util_GetPlayerActiveBleedCount(idx);
+										for (int j = 0; j < count; ++j) {
 
 											int attacker = TF2Util_GetPlayerBleedAttacker(idx, j);
 											weapon = TF2Util_GetPlayerBleedWeapon(idx, j);
@@ -2208,13 +2209,13 @@ public void OnEntityCreated(int entity, const char[] class) {
 		dhook_CTFWeaponBase_SecondaryAttack.HookEntity(Hook_Pre, entity, DHookCallback_CTFWeaponBase_SecondaryAttack_Pre);
 	}
 	else if (StrEqual(class, "tf_weapon_shovel")) {
-		dhook_CTFWeaponBaseMelee_GetMeleeDamage.HookEntity(Hook_Post, entity, DHookCallback_CTFWeaponBaseMelee_GetMeleeDamage_Post);
+		dhook_CTFWeaponBaseMelee_GetMeleeDamage.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_GetMeleeDamage_Post);
 		dhook_CBaseCombatWeapon_Deploy.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_Deploy_Post);
 		dhook_CBaseCombatWeapon_Holster.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_Holster_Post);
 		dhook_CTFWeaponBase_GetSpeedMod.HookEntity(Hook_Post, entity, DHookCallback_CTFShovel_GetSpeedMod_Post);
 	}
 	else if (StrEqual(class, "tf_weapon_stickbomb")) {
-		dhook_CTFWeaponBaseMelee_GetMeleeDamage.HookEntity(Hook_Post, entity, DHookCallback_CTFWeaponBaseMelee_GetMeleeDamage_Post);
+		dhook_CTFWeaponBaseMelee_GetMeleeDamage.HookEntity(Hook_Post, entity, DHookCallback_CTFStickBomb_GetMeleeDamage_Post);
 	}
 	else if (StrEqual(class, "tf_weapon_minigun")) {
 		dhook_CTFMinigun_GetProjectileDamage.HookEntity(Hook_Pre, entity, DHookCallback_CTFMinigun_GetProjectileDamage_Pre);
@@ -5910,7 +5911,7 @@ bool DoShortCircuitProjectileRemoval(int owner, int entity, int base_amount, int
 }
 
 MRESReturn DHookCallback_CTFBaseRocket_GetRadius_Post(int entity, DHookReturn returnValue) {
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (
 		owner >= 1 && owner <= MaxClients &&
 		ItemIsEnabled(Wep_Airstrike) &&
@@ -6089,19 +6090,19 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Pre(int entity
 			}
 		}
 
-		int attacker = GetEntityOwner(entity);
+		int owner = GetOwner(entity);
 		if (
 			ItemIsEnabled(Wep_RescueRanger) &&
-			attacker >= 1 && attacker <= MaxClients
+			owner >= 1 && owner <= MaxClients
 		) {
-			players[attacker].old_metal = -1;
+			players[owner].old_metal = -1;
 
-			if (TF2Attrib_HookValueFloat(0.0, "arrow_heals_buildings", attacker) > 0.0) {
+			if (TF2Attrib_HookValueFloat(0.0, "arrow_heals_buildings", owner) > 0.0) {
 				entities[building].bolt_heal = true;
 
 				// Fake the metal count to allow for free healing.
-				players[attacker].old_metal = GetEntProp(attacker, Prop_Data, "m_iAmmo", 4, TF_AMMO_METAL);
-				SetEntProp(attacker, Prop_Data, "m_iAmmo", 200, 4, TF_AMMO_METAL);
+				players[owner].old_metal = GetEntProp(owner, Prop_Data, "m_iAmmo", 4, TF_AMMO_METAL);
+				SetEntProp(owner, Prop_Data, "m_iAmmo", 200, 4, TF_AMMO_METAL);
 			}
 		}
 	}
@@ -6135,22 +6136,22 @@ MRESReturn DHookCallback_CTFProjectile_Arrow_BuildingHealingArrow_Post(int entit
 		}
 	}
 
-	int attacker = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (
 		ItemIsEnabled(Wep_RescueRanger) &&
-		attacker >= 1 && attacker <= MaxClients &&
-		players[attacker].old_metal >= 0
+		owner >= 1 && owner <= MaxClients &&
+		players[owner].old_metal >= 0
 	) {
 		// Restore the player's metal count.
-		SetEntProp(attacker, Prop_Data, "m_iAmmo", players[attacker].old_metal, 4, TF_AMMO_METAL);
-		players[attacker].old_metal = -1;
+		SetEntProp(owner, Prop_Data, "m_iAmmo", players[owner].old_metal, 4, TF_AMMO_METAL);
+		players[owner].old_metal = -1;
 	}
 
 	return MRES_Ignored;
 }
 
 MRESReturn DHookCallback_CTFProjectile_HealingBolt_ImpactTeamPlayer_Pre(int entity, DHookParam parameters) {
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (owner >= 1 && owner <= MaxClients) {
 		int weapon = GetPlayerWeaponSlot(owner, TFWeaponSlot_Secondary);
 		if (
@@ -6167,7 +6168,7 @@ MRESReturn DHookCallback_CTFProjectile_HealingBolt_ImpactTeamPlayer_Post(int ent
 	int owner, weapon, patient;
 	float added, time_since_damage, charge;
 
-	owner = GetEntityOwner(entity);
+	owner = GetOwner(entity);
 	if (owner >= 1 && owner <= MaxClients) {
 		weapon = GetPlayerWeaponSlot(owner, TFWeaponSlot_Secondary);
 		if (
@@ -6310,7 +6311,6 @@ MRESReturn DHookCallback_CObjectSentrygun_OnWrenchHit_Post(int entity, DHookRetu
 	if (ItemIsEnabled(Wep_Wrangler)) {
 		SetEntProp(entity, Prop_Send, "m_nShieldLevel", entities[entity].old_shield);
 	}
-
 	return MRES_Ignored;
 }
 
@@ -6351,7 +6351,8 @@ MRESReturn DHookCallback_CObjectSentrygun_Construct_Post(int entity, DHookReturn
 		else if (GetItemVariant(Wep_Gunslinger) == 0) {
 			// Pre-GM Gunslinger, prevent mini sentries from gaining health while being built.
 			m_flHealth = entities[entity].minisentry_health;
-		} else {
+		}
+		else {
 			// Release Gunslinger double heal rate on construction
 			float delta = m_flHealth - entities[entity].minisentry_health;
 			if (delta > 0.0) {
@@ -6359,7 +6360,6 @@ MRESReturn DHookCallback_CObjectSentrygun_Construct_Post(int entity, DHookReturn
 				m_flHealth = floatMin(entities[entity].minisentry_health + 2 * delta, health_max);
 			}
 		}
-
 		SetEntDataFloat(entity, CBaseObject_m_flHealth, m_flHealth);
 	}
 	return MRES_Ignored;
@@ -6471,7 +6471,7 @@ MRESReturn DHookCallback_CTFPlayer_GiveAmmo_Pre(int client, DHookReturn returnVa
 }
 
 MRESReturn DHookCallback_CTFLunchBox_SecondaryAttack_Post(int entity) {
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (owner >= 1 && owner <= MaxClients) {
 		int lunchbox = GetEntDataEnt2(entity, CTFLunchBox_m_hThrownPowerUp);
 		if (
@@ -6495,24 +6495,22 @@ MRESReturn DHookCallback_CHealthKit_MyTouch_Pre(int entity, DHookReturn returnVa
 		TF2_GetPlayerClass(client) == TFClass_Heavy
 	) {
 		if (GetClientHealth(client) >= GetMaxHealth(client)) {
-			// Reverted lunchboxes cannot be recharged by picking them up
+			// Reverted lunchboxes cannot be recharged by picking them up.
 			// Heavy can stand over his sandvich all day long and nothing will happen. Blyat.
 			returnValue.Value = false;
 			return MRES_Supercede;
 		}
-		else if (client == GetEntityOwner(entity)) {
-			// Setting owner to 0 makes the Heavy get health from the lunchbox
+		else if (client == GetOwner(entity)) {
+			// Setting owner to 0 makes the Heavy get health from the lunchbox.
 			// Sometimes the simplest of solutions are not so obvious when tunnel vision is involved. :)
 			SetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity", 0);
 		}
 	}
-
 	return MRES_Ignored;
 }
 
 MRESReturn DHookCallback_CTFLunchBox_DrainAmmo_Pre(int entity) {
-	int owner = GetEntityOwner(entity);
-
+	int owner = GetOwner(entity);
 	if (owner >= 1 && owner <= MaxClients) {
 		if (
 			GetItemVariant(Wep_Sandvich) == 0 &&
@@ -6530,7 +6528,6 @@ MRESReturn DHookCallback_CTFLunchBox_DrainAmmo_Pre(int entity) {
 			return MRES_Supercede;
 		}
 	}
-
 	return MRES_Ignored;
 }
 
@@ -6546,7 +6543,7 @@ MRESReturn DHookCallback_CTFRevolver_CanFireCriticalShot_Pre(int entity, DHookRe
 
 MRESReturn DHookCallback_CTFSniperRifleDecap_SniperRifleChargeRateMod_Pre(int entity, DHookReturn returnValue) {
 	if (ItemIsEnabled(Wep_BazaarBargain)) {
-		int owner = GetEntityOwner(entity);
+		int owner = GetOwner(entity);
 		int heads = (owner >= 1 && owner <= MaxClients) ? GetEntProp(owner, Prop_Send, "m_iDecapitations") : 0;
 
 		float multiplier = 0.2 * float(intMin(heads, 6) - 1);
@@ -6629,7 +6626,7 @@ MRESReturn DHookCallback_CTFPlayerShared_AddToSpyCloakMeter_Pre(Address pThis, D
 }
 
 MRESReturn DHookCallback_CWeaponMedigun_ItemPostFrame_Pre(int entity) {
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (
 		GetItemVariant(Wep_Vaccinator) == 1 &&
 		owner >= 1 && owner <= MaxClients &&
@@ -6651,7 +6648,7 @@ MRESReturn DHookCallback_CTFSniperRifle_ItemPostFrame_Post(int entity) {
 	}
 
 	// Uncapped charge rate for Pre-2013 Bazaar Bargain
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (
 		GetItemVariant(Wep_BazaarBargain) == 1 &&
 		owner >= 1 && owner <= MaxClients &&
@@ -6811,7 +6808,7 @@ MRESReturn DHookCallback_CTFDroppedWeapon_ChargeLevelDegradeThink_Pre(int entity
 }
 
 MRESReturn DHookCallback_CTFStunBall_ApplyBallImpactEffectOnVictim_Pre(int entity, DHookParam parameters) {
-	int attacker = GetEntityOwner(entity);
+	int attacker = GetOwner(entity);
 	int victim = parameters.Get(1);
 	float m_flCreationTime;
 	if (
@@ -7187,45 +7184,45 @@ MRESReturn DHookCallback_CTFWeaponBaseGrenadeProj_GetEnemy_Pre(int entity, DHook
 	return MRES_Supercede;
 }
 
-MRESReturn DHookCallback_CTFWeaponBaseMelee_GetMeleeDamage_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
-	int owner;
-	float multiplier = 1.0;
-	char class[64];
+MRESReturn DHookCallback_CTFShovel_GetMeleeDamage_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
+	int owner = GetOwner(entity);
+	if (
+		GetItemVariant(Wep_Pickaxe) > 0 &&
+		owner >= 1 && owner <= MaxClients &&
+		TF2Attrib_HookValueInt(SHOVEL_STANDARD, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST
+	) {
+		float multiplier;
 
-	owner = GetEntityOwner(entity);
-	if (owner > 0) {
-		GetEntityClassname(entity, class, sizeof(class));
-
-		if (
-			GetItemVariant(Wep_Pickaxe) > 0 &&
-			StrEqual(class, "tf_weapon_shovel") &&
-			TF2Attrib_HookValueInt(0, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST
-		) {
-			switch (GetItemVariant(Wep_Pickaxe)) {
-				case 1: multiplier = 1.75; // 113 damage at 1 HP
-				case 2: multiplier = 2.50; // 162 damage at 1 HP
-				default: multiplier = 1.65; // 107 damage at 1 HP; failsafe
-			}
-
-			float health_ratio = float(GetClientHealth(owner)) / float(GetMaxHealth(owner));
-			multiplier = ValveRemapVal(health_ratio, 0.0, 1.0, multiplier, 0.5) / ValveRemapVal(health_ratio, 0.0, 1.0, 1.65, 0.5);
-		}
-		else if (
-			ItemIsEnabled(Wep_Caber) &&
-			StrEqual(class, "tf_weapon_stickbomb")
-		) {
-			multiplier = 35.0 / 55.0; // Set 35 melee damage (from 55)
-
-			Address attrib = TF2Attrib_GetByDefIndex(entity, 476);
-			if (attrib != Address_Null) {
-				multiplier /= TF2Attrib_GetValue(attrib); // Undo the attrib
-			}
+		switch (GetItemVariant(Wep_Pickaxe)) {
+			case 1: multiplier = 1.75; // 113 damage at 1 HP
+			case 2: multiplier = 2.50; // 162 damage at 1 HP
+			default: multiplier = 1.65; // 107 damage at 1 HP; failsafe
 		}
 
-		if (multiplier != 1.0) {
-			returnValue.Value = view_as<float>(returnValue.Value) * multiplier;
-			return MRES_Override;
+		float health_ratio = float(GetClientHealth(owner)) / float(GetMaxHealth(owner));
+		multiplier = ValveRemapVal(health_ratio, 0.0, 1.0, multiplier, 0.5) / ValveRemapVal(health_ratio, 0.0, 1.0, 1.65, 0.5);
+
+		returnValue.Value = view_as<float>(returnValue.Value) * multiplier;
+		return MRES_Override;
+	}
+	return MRES_Ignored;
+}
+
+MRESReturn DHookCallback_CTFStickBomb_GetMeleeDamage_Post(int entity, DHookReturn returnValue, DHookParam parameters) {
+	int owner = GetOwner(entity);
+	if (
+		ItemIsEnabled(Wep_Caber) &&
+		owner >= 1 && owner <= MaxClients
+	) {
+		float multiplier = 35.0 / 55.0; // Set 35 melee damage (from 55)
+
+		Address attrib = TF2Attrib_GetByDefIndex(entity, 476);
+		if (attrib != Address_Null) {
+			multiplier /= TF2Attrib_GetValue(attrib); // Undo the attrib
 		}
+
+		returnValue.Value = view_as<float>(returnValue.Value) * multiplier;
+		return MRES_Override;
 	}
 	return MRES_Ignored;
 }
@@ -7265,7 +7262,7 @@ MRESReturn DHookCallback_CWeaponMedigun_WeaponReset_Pre(int entity) {
 }
 
 MRESReturn DHookCallback_CWeaponMedigun_WeaponReset_Post(int entity) {
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (
 		ItemIsEnabled(Wep_VitaSaw) &&
 		GameRules_GetRoundState() == RoundState_RoundRunning &&
@@ -7302,7 +7299,8 @@ MRESReturn DHookCallback_CTFPlayer_Event_KilledOther_Pre(int client, DHookParam 
 			GetItemVariant(Wep_TideTurner) == 1 &&
 			player_weapons[client][Wep_TideTurner]
 		) {
-			for (int i = 0; i < TF2Util_GetPlayerWearableCount(client); i++) {
+			int count = TF2Util_GetPlayerWearableCount(client);
+			for (int i = 0; i < count; i++) {
 				wearable = TF2Util_GetPlayerWearable(client, i);
 				if (
 					wearable > 0 &&
@@ -7410,7 +7408,7 @@ MRESReturn DHookCallback_CTFShovel_Holster_Post(int entity, DHookReturn returnVa
 }
 
 MRESReturn DHookCallback_CTFShovel_GetSpeedMod_Post(int entity, DHookReturn returnValue) {
-	int owner = GetEntityOwner(entity);
+	int owner = GetOwner(entity);
 	if (
 		ItemIsEnabled(Wep_Pickaxe) &&
 		TF2Attrib_HookValueInt(SHOVEL_STANDARD, "set_weapon_mode", entity) == SHOVEL_DAMAGE_BOOST &&
@@ -7621,7 +7619,7 @@ stock int FindStringIndex2(int tableidx, const char[] str) {
 	return INVALID_STRING_INDEX;
 }
 
-stock int GetEntityOwner(int entity) {
+stock int GetOwner(int entity) {
 	if (!IsValidEntity(entity))
 		return -1;
 
