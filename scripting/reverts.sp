@@ -5814,21 +5814,21 @@ bool DoShortCircuitProjectileRemoval(int owner, int entity, int base_amount, int
 	GetClientEyeAngles(owner, angles1);
 
 	// scan for entities to hit
-	for (idx = 1; idx < MAX_NETWORKED_ENTITIES; idx++) {
+	for (idx = (damage != 0.0) ? 1 : (MaxClients + 1); idx < MAX_NETWORKED_ENTITIES; idx++) {
 		if (IsValidEntity(idx)) {
 			GetEntityClassname(idx, class, sizeof(class));
 
 			// only hit players and some projectiles
 			if (
-				(idx <= MaxClients) ||
+				(idx <= MaxClients && IsPlayerAlive(idx)) ||
 				StrStartsWith(class, "tf_projectile_") &&
-				StrContains(class, "tf_projectile_spell") == -1 &&
 				!StrEqual(class, "tf_projectile_energy_ring") &&
 				!StrEqual(class, "tf_projectile_grapplinghook") &&
-				!StrEqual(class, "tf_projectile_syringe")
+				!StrEqual(class, "tf_projectile_syringe") &&
+				StrContains(class, "tf_projectile_spell") == -1
 			) {
 				// don't hit stuff on the same team
-				if (GetEntProp(idx, Prop_Send, "m_iTeamNum") != GetClientTeam(owner)) {
+				if (!AreEntitiesOnSameTeam(idx, owner)) {
 					GetEntPropVector(idx, Prop_Send, "m_vecOrigin", target_pos);
 
 					// if hitting a player, compare to center
@@ -5864,27 +5864,28 @@ bool DoShortCircuitProjectileRemoval(int owner, int entity, int base_amount, int
 							// didn't hit anything on the way to the target, so proceed
 							if (TR_DidHit() == false) {
 								if (idx <= MaxClients) {
-									if (
-										damage != 0.0 &&
-										IsPlayerAlive(idx)
-									) {
-										hit = true;
+									hit = true;
 
-										// damage players
-										SDKHooks_TakeDamage(idx, entity, owner, damage, DMG_SHOCK, entity, NULL_VECTOR, target_pos, false);
-									}
-								} else {
+									// damage players
+									SDKHooks_TakeDamage(idx, entity, owner, damage, DMG_SHOCK, entity, NULL_VECTOR, target_pos, false);
+								}
+								else {
 									hit = true;
 
 									// delete projectiles
-									if (amount_per_destroyed)
-									{
+									if (amount_per_destroyed) {
 										metal = GetEntProp(owner, Prop_Data, "m_iAmmo", 4, TF_AMMO_METAL);
 										if (metal < (base_amount + amount_per_destroyed)) break;
 										SetEntProp(owner, Prop_Data, "m_iAmmo", intMax(metal - amount_per_destroyed, 0), 4, TF_AMMO_METAL);
 									}
 
-									RemoveEntity(idx);
+									if (StrEqual(class, "tf_projectile_pipe_remote")) {
+										// deal damage to stickies to award achievement progress
+										SDKHooks_TakeDamage(idx, entity, owner, 1.0, DMG_BULLET, entity, NULL_VECTOR, target_pos);
+									}
+									else {
+										RemoveEntity(idx);
+									}
 								}
 
 								if (hit) {
